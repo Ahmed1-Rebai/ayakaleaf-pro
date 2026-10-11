@@ -4,6 +4,7 @@ import { getJSON } from '@/infrastructure/fetch-json'
 export type InstanceFeatures = {
   ai: boolean
   githubSync: boolean
+  gitlabSync: boolean
   zotero: boolean
   mendeley: boolean
 }
@@ -11,14 +12,15 @@ export type InstanceFeatures = {
 const DISABLED: InstanceFeatures = {
   ai: false,
   githubSync: false,
+  gitlabSync: false,
   zotero: false,
   mendeley: false,
 }
 
 // The frontend is compiled once, so it can't read the operator's env vars.
 // Instead it asks the server (GET /system/features) which instance-level
-// features are enabled, and statically bundled UI (github-sync, zotero,
-// mendeley) hides itself when its feature is off. Fetched at most once per page
+// features are enabled, and statically bundled UI (github-sync, gitlab-sync,
+// zotero, mendeley) hides itself when its feature is off. Fetched at most once per page
 // load and shared across every caller.
 let cache: InstanceFeatures | null = null
 let inflight: Promise<InstanceFeatures> | null = null
@@ -33,6 +35,7 @@ function loadInstanceFeatures(): Promise<InstanceFeatures> {
         cache = {
           ai: Boolean(data?.ai),
           githubSync: Boolean(data?.githubSync),
+          gitlabSync: Boolean(data?.gitlabSync),
           zotero: Boolean(data?.zotero),
           mendeley: Boolean(data?.mendeley),
         }

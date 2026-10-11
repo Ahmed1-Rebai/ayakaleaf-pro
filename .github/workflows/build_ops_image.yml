@@ -57,6 +57,14 @@ jobs:
           else
             echo "No locale patch directory found; skipping"
           fi
+          # Merge the added translations over the patched locales
+          for f in services/web/locales/locales_patches/added/*.json; do
+            [ -f "$f" ] || continue  # no added translations
+            lang=$(basename "$f")
+            [ "$lang" = added-translations.json ] && continue
+            jq -s '.[0] * .[1]' "services/web/locales/$lang" "$f" > "$f.tmp"
+            mv "$f.tmp" "services/web/locales/$lang"
+          done
           docker run --rm -v "$(pwd)/services/web/":/overleaf/services/web -w /overleaf/services/web ghcr.io/ayaka-notes/overleaf-pro/dev:webpack yarn run extract-translations
           cd ./server-ce/
           cp .dockerignore ../

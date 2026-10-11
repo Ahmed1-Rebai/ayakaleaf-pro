@@ -1106,6 +1106,10 @@ module.exports = {
         __dirname,
         '../modules/github-sync/frontend/js/components/github-sync-widget.tsx'
       ),
+      Path.resolve(
+        __dirname,
+        '../modules/gitlab-sync/frontend/js/components/gitlab-sync-widget.tsx'
+      ),
     ],
     referenceLinkingWidgets: [
       Path.resolve(
@@ -1127,6 +1131,18 @@ module.exports = {
       Path.resolve(
         __dirname,
         '../modules/github-sync/frontend/js/components/import-from-github-menu.tsx'
+      ),
+    ],
+    importProjectFromGitlabModalWrapper: [
+      Path.resolve(
+        __dirname,
+        '../modules/gitlab-sync/frontend/js/components/import-from-gitlab-modal-wrapper.tsx'
+      ),
+    ],
+    importProjectFromGitlabMenu: [
+      Path.resolve(
+        __dirname,
+        '../modules/gitlab-sync/frontend/js/components/import-from-gitlab-menu.tsx'
       ),
     ],
     editorLeftMenuSync: [
@@ -1216,6 +1232,10 @@ module.exports = {
       ),
       Path.resolve(
         __dirname,
+        '../modules/gitlab-sync/frontend/js/components/gitlab-integration-card.tsx'
+      ),
+      Path.resolve(
+        __dirname,
         '../modules/tpr-webmodule/frontend/js/components/zotero-integration-card.tsx'
       ),
       Path.resolve(
@@ -1263,6 +1283,7 @@ module.exports = {
     'reference-picker',
     'git-bridge',
     'github-sync',
+    'gitlab-sync',
     'tpr-webmodule',
     'workbench',
     'error-assistant',

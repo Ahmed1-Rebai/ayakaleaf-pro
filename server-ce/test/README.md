@@ -86,6 +86,14 @@ One folder per module in `toolkit/suites/`, named and nested like
   pushing, merging, conflicts and the manual merge, renames and deletes,
   binary files, force pushes, lost push access, and what collaborators may
   do. Git-bridge is on as the docs require.
+- `gitlab-sync/` – GitLab Sync against `toolkit/services/gitlab-mock`, a
+  self-managed GitLab at `gitlab.example.com`: linking and unlinking the GitLab
+  account through the OAuth application, refreshing expiring tokens,
+  exporting a project into a new project, importing a repository, pulling,
+  pushing, merging through a merge request (deleted when allowed), conflicts
+  and merges held back by approval or pipeline rules, renames and deletes,
+  binary files, force pushes, lost push access, and what collaborators may
+  do. Git-bridge is on as the docs require.
 - `tpr-webmodule/` – Zotero and Mendeley against `toolkit/services/tpr-mock`:
   linking and unlinking through OAuth 1.0a (Zotero, with its signatures
   checked) and OAuth 2.0 (Mendeley), cancelled and refused links, forged
