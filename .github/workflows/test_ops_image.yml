@@ -84,6 +84,8 @@ jobs:
       - name: "Print Overleaf Logs"
         if: failure()
         run: |
+          docker logs --tail 200 mongo || true
+          docker inspect mongo --format 'exit={{.State.ExitCode}} oom={{.State.OOMKilled}} error={{.State.Error}}' || true
           docker logs --tail 200 sharelatex
           docker exec sharelatex bash -c 'tail -n 100 /var/log/overleaf/*.log'
       # Artifact names cannot contain the slash of nested suites
