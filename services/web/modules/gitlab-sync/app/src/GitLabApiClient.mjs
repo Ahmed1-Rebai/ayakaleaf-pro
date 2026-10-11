@@ -49,7 +49,7 @@ const MERGE_STATUS_MERGEABLE = new Set(['mergeable', 'can_be_merged'])
 // not mergeable (conflict, approvals, pipeline...), head moved, failed
 const MERGE_REFUSED_STATUSES = new Set([401, 405, 406, 409, 422])
 
-const maxConcurrency = process.env.GITLAB_API_MAX_CONCURRENCY || 5
+const maxConcurrency = parseInt(process.env.GITLAB_API_MAX_CONCURRENCY, 10) || 5
 
 // Optionally route all server-side GitLab requests through an HTTP proxy
 const gitlabProxyAgent = process.env.GITLAB_SYNC_PROXY_URL

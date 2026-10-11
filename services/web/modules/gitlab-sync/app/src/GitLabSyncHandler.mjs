@@ -191,6 +191,12 @@ async function importRepo(userId, projectName, repoFullName, defaultBranchName) 
 }
 
 async function exportProject(userId, projectId, repoOptions) {
+  // only the owner may link the project, as the UI shows
+  const { owner_ref } = await ProjectGetter.promises.getProject(projectId, { owner_ref: 1 })
+  if (owner_ref.toString() !== userId) {
+    throw new PermissionDeniedError('Only the project owner can export', { projectId, status: 403 })
+  }
+
   const isLinked = await SyncStateManager.getProjectState(projectId)
   if (isLinked) {
     throw new OError('Project is already linked to Git server', { projectId })

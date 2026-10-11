@@ -1084,6 +1084,20 @@ describe('collaborators', function () {
       syncModal()
         .findByRole('button', { name: 'Create a GitLab repository' })
         .should('not.exist')
+      // Nor through the API: no repository is created or linked
+      const name = projectName('FromEditor')
+      postWithCsrf(`/project/${projectId}/gitlab-sync/export`, { name })
+        .its('status')
+        .should('equal', 403)
+      projectSyncState(projectId)
+        .its('mergeStatus')
+        .should('equal', 'need-export')
+      cy.request({
+        url: `http://gitlab-mock:8080/_mock/repos/${GITLAB_USER}/${name.toLowerCase()}`,
+        failOnStatusCode: false,
+      })
+        .its('status')
+        .should('equal', 404)
     })
   })
 
