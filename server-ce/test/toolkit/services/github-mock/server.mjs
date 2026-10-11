@@ -602,6 +602,15 @@ const github = [
       send(res, 201, commitJson(sha))
     },
   ],
+  // No pull requests are opened here: branches are merged with git commits
+  [
+    'GET',
+    /^\/repos\/([^/]+)\/([^/]+)\/pulls$/,
+    ({ req, res, params: [owner, name] }) => {
+      repoFor(req, owner, name)
+      send(res, 200, [])
+    },
+  ],
   [
     'GET',
     /^\/repos\/([^/]+)\/([^/]+)\/compare\/([^.]+)\.\.\.(.+)$/,
@@ -723,6 +732,31 @@ const control = [
       )
       repo.refs.set(repo.defaultBranch, head)
       send(res, 201, { head })
+    },
+  ],
+  // A branch deleted on GitHub
+  [
+    'DELETE',
+    /^\/_mock\/repos\/([^/]+)\/([^/]+)\/branches\/(.+)$/,
+    ({ res, url, params: [owner, name, branch] }) => {
+      const repo = state.repos.get(`${owner}/${name}`)
+      if (!repo) throw new HttpError(404, 'Not Found')
+      const head = repo.refs.get(branch)
+      if (!head) throw new HttpError(404, 'No such branch')
+      repo.refs.delete(branch)
+      // ?gc=true also drops the commits no branch reaches any more, as
+      // GitHub and GitLab eventually do with unreachable commits
+      if (url.searchParams.get('gc') === 'true') {
+        const reachable = new Set(
+          [...state.repos.values()].flatMap(r =>
+            [...r.refs.values()].flatMap(sha => [...ancestors(sha)])
+          )
+        )
+        for (const sha of ancestors(head)) {
+          if (!reachable.has(sha)) state.commits.delete(sha)
+        }
+      }
+      send(res, 204)
     },
   ],
   // Body: { files: { path: content } } - replaces the default branch with a

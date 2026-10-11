@@ -5,7 +5,7 @@ import logger from '@overleaf/logger'
 import SyncStateManager from './SyncStateManager.mjs'
 import api from './GitHubApiClient.mjs'
 import HistoryManager from './HistoryManager.mjs'
-import { GitConflictError, GitNotLinkedError } from './GitSyncErrors.mjs'
+import { GitConflictError, GitNotLinkedError, NotFoundError } from './GitSyncErrors.mjs'
 import TokenManager from './TokenManager.mjs'
 import { ObjectId } from '../../../../app/src/infrastructure/mongodb.mjs'
 import LockManager from '../../../../app/src/infrastructure/LockManager.mjs'
@@ -47,9 +47,32 @@ async function doGitMergeWithoutLock(userId, projectId, message, claimConflictIs
   const currentVersion = await HistoryManager.latestVersion(projectId)
   const defaultBranchHead = await api.getBranchHead(token, repoFullName, defaultBranchName)
 
+  // 'I have manually merged' is only trusted once GitHub confirms the merge,
+  // otherwise the default branch would replace the unmerged OL changes
+  let syncStatus = mergeStatus
+  if (mergeStatus === 'conflict') {
+    const merged = await api.isBranchMerged(token, repoFullName, {
+      base: defaultBranchName,
+      baseHead: defaultBranchHead,
+      branch: unmergedBranchName,
+      branchHead: projectSyncState.unmergedBranchHead,
+    })
+    if (!merged) {
+      const branchExists = await api.getBranchHead(token, repoFullName, unmergedBranchName)
+        .then(() => true, err => {
+          if (err instanceof NotFoundError) return false
+          throw err
+        })
+      if (branchExists) return { mergeStatus, repoFullName, unmergedBranchName }
+      // The branch was deleted unmerged and its commits may be gone: rebuild
+      // it from the Overleaf history, as after a force push
+      syncStatus = 'diverged'
+    }
+  }
+
   let newUnmergedBranchName
 
-  switch (mergeStatus) {
+  switch (syncStatus) {
 
     case 'clean':
       newUnmergedBranchName = await resolveCleanSyncState(

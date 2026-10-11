@@ -465,6 +465,33 @@ function mergeBranch(token, repoFullName, base, head) {
   }, 'mergeBranch').then(r => r.sha)
 }
 
+// Whether the temporary branch has been merged into base, whose head is
+// baseHead: branchHead is an ancestor of baseHead, or a pull request from
+// the branch was merged (squash and rebase merges leave no ancestor)
+async function isBranchMerged(token, repoFullName, { base, baseHead, branch, branchHead }) {
+  try {
+    const data = await fetchGitHubJson(`${GITHUB_API_BASE}/repos/${repoFullName}/compare/${branchHead}...${baseHead}`, {
+      headers: buildHeaders(token),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+    }, 'isBranchMerged:compare')
+    if (data.status === 'ahead' || data.status === 'identical') return true
+  } catch (err) {
+    // 404 when the commits have no common ancestor, or when branchHead is
+    // gone (unreachable after the branch was deleted)
+    if (!(err instanceof NotFoundError)) throw err
+  }
+
+  const url = new URL(`${GITHUB_API_BASE}/repos/${repoFullName}/pulls`)
+  url.searchParams.set('state', 'closed')
+  url.searchParams.set('head', `${repoFullName.split('/')[0]}:${branch}`)
+  url.searchParams.set('base', base)
+  const pulls = await fetchGitHubJson(url.toString(), {
+    headers: buildHeaders(token),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+  }, 'isBranchMerged:pulls')
+  return pulls.some(pull => pull.merged_at)
+}
+
 function compareCommits(token, repoFullName, from, to) {
   return fetchGitHubJson(`${GITHUB_API_BASE}/repos/${repoFullName}/compare/${from}...${to}`, {
     headers: buildHeaders(token),
@@ -502,6 +529,7 @@ export default {
   updateBranch,
   deleteBranch,
   mergeBranch,
+  isBranchMerged,
   compareCommits,
   getRepoZipball,
 }

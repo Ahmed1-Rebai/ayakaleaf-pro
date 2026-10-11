@@ -38,7 +38,11 @@ type MockRepo = {
   commits: MockCommit[]
 }
 
-function mock(method: 'GET' | 'POST' | 'PUT', path: string, body?: object) {
+function mock(
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  path: string,
+  body?: object
+) {
   return cy.request({
     method,
     url: `http://github-mock:8080/_mock${path}`,
@@ -421,6 +425,14 @@ describe('syncing a linked project', function () {
     })
   }
 
+  // With gc, the commits only the branch reached are cleaned up too
+  function deleteBranchOnGitHub(branch: string, gc = false) {
+    return mock(
+      'DELETE',
+      `/repos/${fullName}/branches/${branch}${gc ? '?gc=true' : ''}`
+    )
+  }
+
   function mergeOverview() {
     return cy
       .request(`/project/${projectId}/github-sync/merge/overview`)
@@ -622,6 +634,141 @@ describe('syncing a linked project', function () {
     cy.get('.cm-content')
       .should('contain.text', 'First line from GitHub')
       .and('contain.text', 'Main from Overleaf')
+  })
+
+  it('keeps the conflict when the user continues without merging', function () {
+    commitOnGitHub(
+      { 'main.tex': main.replace('First line', 'First line from GitHub') },
+      'Main on GitHub'
+    )
+    openProject(projectId)
+    editMainInOverleaf('Main from Overleaf')
+    openSyncModalInEditor()
+    syncNow()
+    syncModal().should('contain.text', 'could not be automatically merged')
+    projectSyncState(projectId).then(state => {
+      cy.wrap(state.unmergedBranchName).as('unmergedBranch')
+    })
+
+    // The branch is not merged on GitHub: GitHub's side must not replace
+    // Overleaf's changes
+    syncModal()
+      .findByRole('button', { name: 'I have manually merged. Continue' })
+      .click()
+    syncModal()
+      .should('contain.text', 'could not be automatically merged')
+      .findByRole('button', { name: 'I have manually merged. Continue' })
+      .should('exist')
+    cy.get<string>('@unmergedBranch').then(branch => {
+      projectSyncState(projectId).should('deep.include', {
+        mergeStatus: 'conflict',
+        unmergedBranchName: branch,
+      })
+      mockRepo(fullName).then(repo => {
+        expect(repo.branches).to.have.property(branch)
+        expect(repo.files['main.tex']).not.to.contain('Main from Overleaf')
+      })
+    })
+    openProject(projectId)
+    cy.get('.cm-content')
+      .should('contain.text', 'Main from Overleaf')
+      .and('not.contain.text', 'First line from GitHub')
+  })
+
+  it('rebuilds a branch deleted without merging', function () {
+    commitOnGitHub(
+      { 'main.tex': main.replace('First line', 'First line from GitHub') },
+      'Main on GitHub'
+    )
+    openProject(projectId)
+    editMainInOverleaf('Main from Overleaf')
+    openSyncModalInEditor()
+    syncNow()
+    syncModal().should('contain.text', 'could not be automatically merged')
+    // The branch is deleted and its commit cleaned up on GitHub
+    projectSyncState(projectId).then(state => {
+      deleteBranchOnGitHub(state.unmergedBranchName, true)
+    })
+
+    // Nothing is left to merge: the branch is rebuilt from the Overleaf
+    // history and the conflict stays, GitHub's side replaces nothing
+    syncModal()
+      .findByRole('button', { name: 'I have manually merged. Continue' })
+      .click()
+    syncModal().should('contain.text', 'could not be automatically merged')
+    projectSyncState(projectId).then(state => {
+      expect(state.mergeStatus).to.equal('conflict')
+      cy.wrap(state.unmergedBranchName).as('rebuiltBranch')
+      mockRepo(fullName).then(repo => {
+        expect(repo.branches).to.have.property(state.unmergedBranchName)
+        expect(repo.files['main.tex']).to.contain('First line from GitHub')
+        expect(repo.files['main.tex']).not.to.contain('Main from Overleaf')
+      })
+    })
+    openProject(projectId)
+    cy.get('.cm-content')
+      .should('contain.text', 'Main from Overleaf')
+      .and('not.contain.text', 'First line from GitHub')
+
+    // The user merges the rebuilt branch, then continues
+    cy.get<string>('@rebuiltBranch').then(branch => {
+      commitOnGitHub(
+        {
+          'main.tex': main.replace(
+            'First line',
+            'First line from GitHub\nMain from Overleaf'
+          ),
+        },
+        'Merge Overleaf changes',
+        branch
+      )
+    })
+    openSyncModalInEditor()
+      .findByRole('button', { name: 'I have manually merged. Continue' })
+      .click()
+    expectUpToDate()
+    projectSyncState(projectId).its('mergeStatus').should('equal', 'clean')
+    cy.get('.cm-content')
+      .should('contain.text', 'First line from GitHub')
+      .and('contain.text', 'Main from Overleaf')
+  })
+
+  it('continues when the branch was deleted after merging', function () {
+    commitOnGitHub(
+      { 'main.tex': main.replace('First line', 'First line from GitHub') },
+      'Main on GitHub'
+    )
+    openProject(projectId)
+    editMainInOverleaf('Main from Overleaf')
+    openSyncModalInEditor()
+    syncNow()
+    syncModal().should('contain.text', 'could not be automatically merged')
+    projectSyncState(projectId).then(state => {
+      cy.wrap(state.unmergedBranchName).as('unmergedBranch')
+      commitOnGitHub(
+        {
+          'main.tex': main.replace(
+            'First line',
+            'First line from GitHub\nMain from Overleaf'
+          ),
+        },
+        'Merge Overleaf changes',
+        state.unmergedBranchName
+      )
+      deleteBranchOnGitHub(state.unmergedBranchName, true)
+    })
+    syncModal()
+      .findByRole('button', { name: 'I have manually merged. Continue' })
+      .click()
+    expectUpToDate()
+    projectSyncState(projectId).its('mergeStatus').should('equal', 'clean')
+    cy.get('.cm-content')
+      .should('contain.text', 'First line from GitHub')
+      .and('contain.text', 'Main from Overleaf')
+    cy.get<string>('@unmergedBranch').then(branch => {
+      // the merged branch is not brought back
+      mockRepo(fullName).its('branches').should('not.have.property', branch)
+    })
   })
 
   it('keeps edits made in Overleaf while a conflict is open', function () {
