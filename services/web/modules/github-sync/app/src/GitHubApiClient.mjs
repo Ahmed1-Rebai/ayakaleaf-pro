@@ -32,7 +32,7 @@ const MAX_PER_PAGE = 100  // GitHub REST API limit
 const REQUEST_TIMEOUT_MS = 60 * 1000
 const REQUEST_LONG_TIMEOUT_MS = 600 * 1000
 
-const maxConcurrency = process.env.GITHUB_API_MAX_CONCURRENCY || 5
+const maxConcurrency = parseInt(process.env.GITHUB_API_MAX_CONCURRENCY, 10) || 5
 
 // Optionally route all server-side GitHub requests through an HTTP proxy
 const githubProxyAgent = process.env.GITHUB_SYNC_PROXY_URL
