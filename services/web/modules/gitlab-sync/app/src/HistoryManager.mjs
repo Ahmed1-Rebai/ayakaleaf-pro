@@ -17,6 +17,17 @@ async function latestVersion(projectId) {
   }
 }
 
+// latest summarized updates, newest first: [{ fromV, toV, meta: { origin } }]
+async function getUpdates(projectId) {
+  const url = `${urlBase}/${projectId}/updates`
+  try {
+    const json = await fetchJson(url)
+    return json.updates
+  } catch (err) {
+    throw OError.tag(err, 'Failed to get the project updates from history', { projectId })
+  }
+}
+
 async function getProjectSnapshot(projectId, version) {
   const url = `${urlBase}/${projectId}/version/${version}`
   try {
@@ -90,6 +101,7 @@ async function _streamToBase64(stream) {
 
 export default {
   latestVersion,
+  getUpdates,
   getPathsAtVersion,
   getProjectSnapshot,
   getProjectFileBuffer,

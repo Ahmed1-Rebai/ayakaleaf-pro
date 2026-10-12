@@ -411,6 +411,7 @@ async function resolveDetachedSyncState(
         entries: cleanLocalEntries,
         message,
         branch: defaultBranchName,
+        lastCommitId: defaultBranchHead,
       })
       lastSyncCommit = commit || defaultBranchHead
     }
@@ -564,7 +565,15 @@ async function applyGitSnapshotToProject({ token, userId, projectId, repoFullNam
     }))
   )
 
-  return await HistoryManager.latestVersion(projectId)
+  const newVersion = await HistoryManager.latestVersion(projectId)
+  if (newVersion === currentVersion) return newVersion
+  // Edits made by others while pulling are not on GitLab yet: keep them
+  // pending by syncing from the version before the pull
+  const pullUpdates = (await HistoryManager.getUpdates(projectId))
+    .filter(update => update.toV > currentVersion && update.fromV < newVersion)
+  const onlyPulled = pullUpdates.at(-1)?.fromV <= currentVersion &&
+    pullUpdates.every(update => update.meta.origin?.kind === 'gitlab')
+  return onlyPulled ? newVersion : currentVersion
 }
 
 function buildDetachedSyncPlan({

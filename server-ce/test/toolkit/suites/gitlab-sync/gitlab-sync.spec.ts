@@ -654,6 +654,52 @@ describe('syncing a linked project', function () {
     projectSyncState(projectId).its('mergeStatus').should('equal', 'conflict')
   })
 
+  it('keeps edits made in Overleaf while pulling for the next sync', function () {
+    commitOnGitLab({ 'chapter.tex': 'Chapter from GitLab' }, 'Chapter on GitLab')
+    openProject(projectId)
+    // The pull waits on downloading chapter.tex; the page's own request is
+    // not awaited so that the edit below lands in the middle of it
+    mock('POST', '/delay-next-download', { ms: 8000 })
+    cy.get('meta[name="ol-csrfToken"]')
+      .invoke('attr', 'content')
+      .then(csrfToken => {
+        cy.window().then(win => {
+          // a promise on the window, cy.wrap would wait for it right away
+          ;(win as any).pull = win
+            .fetch(`/project/${projectId}/gitlab-sync/merge`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Csrf-Token': csrfToken as string,
+              },
+              body: JSON.stringify({ message: '', claimConflictIsResolved: false }),
+            })
+            .then(response => response.json())
+        })
+      })
+    cy.findByRole('textbox', { name: 'Source Editor editing' }).within(() => {
+      cy.findByText('First line').click()
+      cy.findByText('First line').type('{end}\nWritten while pulling')
+    })
+    cy.window()
+      .then(win => cy.wrap((win as any).pull, { timeout: 30000 }))
+      .its('mergeStatus')
+      .should('equal', 'clean')
+    mockRepo(fullName).then(repo => {
+      expect(repo.files['main.tex']).not.to.contain('Written while pulling')
+      expect(repo.files['chapter.tex']).to.equal('Chapter from GitLab')
+    })
+    // The edit is still pending and goes out with the next sync
+    waitForProjectUpdated()
+    openSyncModalInEditor()
+    syncNow()
+    expectUpToDate()
+    mockRepo(fullName).then(repo => {
+      expect(repo.files['main.tex']).to.contain('First line\nWritten while pulling')
+      expect(repo.files['chapter.tex']).to.equal('Chapter from GitLab')
+    })
+  })
+
   it('merges changes made on both sides through a merge request', function () {
     commitOnGitLab(
       { 'chapter.tex': 'Chapter from GitLab' },

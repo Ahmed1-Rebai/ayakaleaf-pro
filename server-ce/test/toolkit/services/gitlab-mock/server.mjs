@@ -40,6 +40,7 @@ function reset() {
     commits: new Map(), // sha -> { tree, parents, message, author }
     repos: new Map(), // path with namespace -> repo
     denyNextAuthorize: false,
+    nextDownloadDelay: 0, // ms
   }
 }
 reset()
@@ -679,8 +680,13 @@ const gitlab = [
   [
     'GET',
     new RegExp(`${P}/repository/files/([^/]+)/raw$`),
-    ({ req, res, url, params: [id, path] }) => {
+    async ({ req, res, url, params: [id, path] }) => {
       const repo = repoFor(req, id)
+      if (state.nextDownloadDelay) {
+        const delay = state.nextDownloadDelay
+        state.nextDownloadDelay = 0
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
       const commit = resolveRef(repo, url.searchParams.get('ref'))
       const blob = commit && treeOf(commit)[path]
       if (!blob) throw new HttpError(404, '404 File Not Found')
@@ -1017,6 +1023,16 @@ const control = [
     /^\/_mock\/deny-next-authorize$/,
     ({ res }) => {
       state.denyNextAuthorize = true
+      send(res, 204)
+    },
+  ],
+  // Body: { ms } - the next file download waits, so a sync stays in the
+  // middle of pulling for that long
+  [
+    'POST',
+    /^\/_mock\/delay-next-download$/,
+    ({ res, body }) => {
+      state.nextDownloadDelay = body.ms
       send(res, 204)
     },
   ],
