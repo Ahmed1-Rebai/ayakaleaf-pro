@@ -9,7 +9,7 @@ const projectParamsSchema = z.object({
     params: z.object({ project_id: zz.objectId() }),
 })
 
-function requireProjectAccess(checkPermission) {
+export function requireProjectAccess(checkPermission) {
     return expressify(async (req, res, next) => {
         const { params } = parseReq(req, projectParamsSchema)
         if (!(await checkPermission(req.oauth_user._id.toString(), params.project_id))) {
