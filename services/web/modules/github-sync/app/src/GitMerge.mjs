@@ -557,7 +557,15 @@ async function applyGitSnapshotToProject({ token, userId, projectId, repoFullNam
     }))
   )
 
-  return await HistoryManager.latestVersion(projectId)
+  const newVersion = await HistoryManager.latestVersion(projectId)
+  if (newVersion === currentVersion) return newVersion
+  // Edits made by others while pulling are not on GitHub yet: keep them
+  // pending by syncing from the version before the pull
+  const pullUpdates = (await HistoryManager.getUpdates(projectId))
+    .filter(update => update.toV > currentVersion && update.fromV < newVersion)
+  const onlyPulled = pullUpdates.at(-1)?.fromV <= currentVersion &&
+    pullUpdates.every(update => update.meta.origin?.kind === 'github')
+  return onlyPulled ? newVersion : currentVersion
 }
 
 async function buildDetachedSyncPlan({
@@ -779,7 +787,7 @@ function getEntryHash(entry) {
 }
 
 function gitBlobShaFromString(str) {
-  if (!str) return null
+  if (str == null) return null
   const content = Buffer.from(str, 'utf8')
   const header = Buffer.from(`blob ${content.length}\0`, 'utf8')
   const store = Buffer.concat([header, content])

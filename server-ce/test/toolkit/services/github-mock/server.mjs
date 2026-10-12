@@ -34,6 +34,7 @@ function reset() {
     commits: new Map(), // sha -> { tree, parents, message, author }
     repos: new Map(), // full name -> repo
     denyNextAuthorize: false,
+    nextDownloadDelay: 0, // ms
   }
 }
 reset()
@@ -641,8 +642,13 @@ const github = [
   [
     'GET',
     /^\/repos\/([^/]+)\/([^/]+)\/contents\/(.+)$/,
-    ({ req, res, url, params: [owner, name, path] }) => {
+    async ({ req, res, url, params: [owner, name, path] }) => {
       const repo = repoFor(req, owner, name)
+      if (state.nextDownloadDelay) {
+        const delay = state.nextDownloadDelay
+        state.nextDownloadDelay = 0
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
       const ref = url.searchParams.get('ref') || repo.defaultBranch
       const commit = state.commits.has(ref) ? ref : repo.refs.get(ref)
       const blob = commit && treeOf(commit)[path]
@@ -808,6 +814,16 @@ const control = [
     /^\/_mock\/deny-next-authorize$/,
     ({ res }) => {
       state.denyNextAuthorize = true
+      send(res, 204)
+    },
+  ],
+  // Body: { ms } - the next file download waits, so a sync stays in the
+  // middle of pulling for that long
+  [
+    'POST',
+    /^\/_mock\/delay-next-download$/,
+    ({ res, body }) => {
+      state.nextDownloadDelay = body.ms
       send(res, 204)
     },
   ],
