@@ -149,20 +149,30 @@ describe('MCP server of a project', function () {
       capabilities: {},
       clientInfo: { name: 'e2e', version: '1.0.0' },
     })
-      .its('body.result.serverInfo.name')
-      .should('equal', 'overleaf')
+      .its('body.result')
+      .should(result => {
+        expect(result.serverInfo.name).to.equal('overleaf')
+        // where to clone and where to download, so outputs stay out of git
+        expect(result.instructions).to.contain(`./${projectId}/`)
+        expect(result.instructions).to.contain('./output.pdf')
+      })
     mcp(projectId, ownerToken, 'tools/list')
       .its('body.result.tools')
       .then((tools: { name: string }[]) => tools.map(tool => tool.name).sort())
       .should('deep.equal', [
         'compile',
+        'delete_file',
+        'edit_file',
         'get_clone_info',
         'get_compile_log',
         'get_output_file_link',
         'get_settings',
+        'list_files',
         'list_versions',
-        'set_compiler',
+        'read_file',
+        'update_settings',
         'word_count',
+        'write_file',
       ])
   })
 
@@ -311,7 +321,7 @@ describe('MCP server of a project', function () {
         download(link).its('status').should('equal', 200)
       )
     })
-    callTool(projectId, viewerToken, 'set_compiler', {
+    callTool(projectId, viewerToken, 'update_settings', {
       compiler: 'xelatex',
     }).then(result => {
       expect(result.isError).to.equal(true)
@@ -320,7 +330,7 @@ describe('MCP server of a project', function () {
   })
 
   it('lets the owner change the compiler', function () {
-    callTool(projectId, ownerToken, 'set_compiler', {
+    callTool(projectId, ownerToken, 'update_settings', {
       compiler: 'xelatex',
     }).then(result => expect(result.isError).not.to.equal(true))
     compile(projectId, ownerToken).then(build => {
@@ -329,6 +339,152 @@ describe('MCP server of a project', function () {
         clsiServerId: build.clsiServerId,
       }).then(result => expect(result.content[0].text).to.contain('XeTeX'))
     })
+  })
+
+  it('refuses a TeX Live image Overleaf does not offer', function () {
+    callTool(projectId, ownerToken, 'update_settings', {
+      texLiveImage: 'texlive/texlive:1999',
+    }).then(result => {
+      expect(result.isError).to.equal(true)
+      expect(result.content[0].text).to.contain('not an available TeX Live image')
+    })
+  })
+})
+
+describe('Editing a project through MCP', function () {
+  let projectId: string
+  let token: string
+
+  before(function () {
+    login(owner)
+    createProject(projectName('Mcp edit')).then(id => {
+      projectId = id
+    })
+    createGitToken().then(created => {
+      token = created
+    })
+  })
+
+  function readFile(path: string) {
+    return callTool(projectId, token, 'read_file', { path }).then(
+      result => result.content[0].text
+    )
+  }
+
+  it('writes, edits and deletes files', function () {
+    callTool(projectId, token, 'write_file', {
+      path: 'sections/intro.tex',
+      content: 'Written through MCP\nSecond line',
+    })
+    callTool(projectId, token, 'list_files')
+      .then(toolJson)
+      .should('deep.include', { path: 'sections/intro.tex', type: 'doc' })
+    readFile('sections/intro.tex').should(
+      'equal',
+      'Written through MCP\nSecond line'
+    )
+
+    callTool(projectId, token, 'edit_file', {
+      path: 'sections/intro.tex',
+      oldString: 'Second line',
+      newString: 'Edited through MCP',
+    })
+    readFile('sections/intro.tex').should(
+      'equal',
+      'Written through MCP\nEdited through MCP'
+    )
+
+    callTool(projectId, token, 'delete_file', { path: 'sections/intro.tex' })
+    callTool(projectId, token, 'list_files')
+      .then(toolJson)
+      .then((files: { path: string }[]) => files.map(file => file.path))
+      .should('not.include', 'sections/intro.tex')
+  })
+
+  it('refuses an edit whose text is missing or not unique', function () {
+    callTool(projectId, token, 'write_file', {
+      path: 'twice.tex',
+      content: 'same\nsame',
+    })
+    callTool(projectId, token, 'edit_file', {
+      path: 'twice.tex',
+      oldString: 'gone',
+      newString: 'x',
+    }).then(result => {
+      expect(result.isError).to.equal(true)
+      expect(result.content[0].text).to.contain('read_file again')
+    })
+    callTool(projectId, token, 'edit_file', {
+      path: 'twice.tex',
+      oldString: 'same',
+      newString: 'x',
+    }).then(result => {
+      expect(result.isError).to.equal(true)
+      expect(result.content[0].text).to.contain('appears 2 times')
+    })
+    readFile('twice.tex').should('equal', 'same\nsame')
+  })
+
+  it('keeps binary files binary', function () {
+    login(owner)
+    createProject(projectName('Mcp binary'), 'example').then(exampleId => {
+      callTool(exampleId, token, 'write_file', {
+        path: 'frog.jpg',
+        content: 'not an image',
+      }).then(result => {
+        expect(result.isError).to.equal(true)
+        expect(result.content[0].text).to.contain('is a binary file')
+      })
+      callTool(exampleId, token, 'list_files')
+        .then(toolJson)
+        .should('deep.include', { path: 'frog.jpg', type: 'file' })
+    })
+  })
+
+  it('shows the edits live in the open editor', function () {
+    login(owner)
+    openProject(projectId)
+    cy.findByRole('textbox', { name: 'Source Editor editing' }).should(
+      'not.contain.text',
+      'Live from MCP'
+    )
+    callTool(projectId, token, 'edit_file', {
+      path: 'main.tex',
+      oldString: '\\section{Introduction}',
+      newString: '\\section{Introduction}\nLive from MCP',
+    })
+      .then(result => expect(result.isError).not.to.equal(true))
+    cy.findByRole('textbox', { name: 'Source Editor editing' }).should(
+      'contain.text',
+      'Live from MCP'
+    )
+    // applied like a collaborator's edit, without the external update warning
+    cy.findByRole('dialog').should('not.exist')
+  })
+
+  it('compiles the edits right away', function () {
+    compile(projectId, token).then(build => {
+      expect(build.status).to.equal('success')
+      callTool(projectId, token, 'word_count', {
+        clsiServerId: build.clsiServerId,
+      })
+        .then(toolJson)
+        .its('textWords')
+        .should('be.greaterThan', 2)
+    })
+  })
+
+  it('changes the main document', function () {
+    callTool(projectId, token, 'write_file', {
+      path: 'other.tex',
+      content: MAIN_TEX,
+    })
+    callTool(projectId, token, 'update_settings', { mainDocument: 'other.tex' })
+      .then(result => expect(result.isError).not.to.equal(true))
+    callTool(projectId, token, 'get_settings')
+      .then(toolJson)
+      .its('mainDocument')
+      .should('equal', 'other.tex')
   })
 })
 
@@ -358,7 +514,7 @@ describe('MCP server card in the editor', function () {
 })
 
 describe('MCP access by role', function () {
-  // read: compile and its output; write: project settings
+  // read: compile and its output; write: files and project settings
   const roles = [
     { role: 'an invited editor', share: 'readAndWrite', link: false, write: true },
     { role: 'an editor through the link', share: 'readAndWrite', link: true, write: true },
@@ -389,7 +545,15 @@ describe('MCP access by role', function () {
             download(link).its('status').should('equal', 200)
           )
         })
-        callTool(projectId, token, 'set_compiler', {
+        callTool(projectId, token, 'write_file', {
+          path: 'by-member.tex',
+          content: 'Written by a member',
+        }).then(result =>
+          expect(result.isError === true, result.content[0].text).to.equal(
+            !write
+          )
+        )
+        callTool(projectId, token, 'update_settings', {
           compiler: 'lualatex',
         }).then(result =>
           expect(result.isError === true, result.content[0].text).to.equal(

@@ -153,8 +153,7 @@ function McpModal({
 
       <OLModalBody>
         <p>
-          Connect an AI client with a Git authentication token. Files are
-          edited through Git.
+          Connect an AI client with a Git authentication token.
         </p>
         <CopyableCode content={url} />
 
