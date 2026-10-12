@@ -7,6 +7,7 @@ import MaterialIcon from '@/shared/components/material-icon'
 import getMeta from '@/utils/meta'
 import useAiAccess from '@modules/workbench/frontend/js/hooks/use-ai-access'
 import { useEditorViewContext } from '@/features/ide-react/context/editor-view-context'
+import { useFileTreePathContext } from '@/features/file-tree/contexts/file-tree-path'
 import type { SuggestFixLogEntry } from '../hooks/use-suggest-fix'
 
 /**
@@ -31,6 +32,7 @@ export default function SuggestFixButton({
 }) {
   const { t } = useTranslation()
   const { view } = useEditorViewContext()
+  const { findEntityByPath } = useFileTreePathContext()
   const hasAiFeatures = useAiAccess('errorAssistant')
   const disabled = Boolean(getMeta('ol-showAiFeaturesDisabled'))
 
@@ -49,9 +51,11 @@ export default function SuggestFixButton({
   }, [id])
 
   // Show the action only when AI access and usable error context are available.
+  // AI fixes edit project docs only, not files of the TeX distribution
   const fixable =
     Boolean(view) &&
     hasAiFeatures &&
+    Boolean(logEntry?.file && findEntityByPath(logEntry.file)?.type === 'doc') &&
     Boolean(
       logEntry?.level && FIXABLE_LEVELS[logEntry.level] && logEntry?.raw
     )

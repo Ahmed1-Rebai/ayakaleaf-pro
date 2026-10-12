@@ -12,6 +12,7 @@ import { sendMB } from '@/infrastructure/event-tracking'
 import useAiAccess from '@modules/workbench/frontend/js/hooks/use-ai-access'
 import useAiConsent from '@/shared/hooks/use-ai-consent'
 import { useEditorViewContext } from '@/features/ide-react/context/editor-view-context'
+import { useFileTreePathContext } from '@/features/file-tree/contexts/file-tree-path'
 import { useSuggestFix, type SuggestFixLogEntry } from '../hooks/use-suggest-fix'
 import { ErrorAssistantMessage } from './error-assistant-message'
 import { previousFixEffect } from '../extensions/previous-fix'
@@ -41,6 +42,7 @@ export default function ErrorAssistant({
   const showAiFeaturesDisabled = getMeta('ol-showAiFeaturesDisabled')
   const { hasGivenAiConsent, giveAiConsent } = useAiConsent()
   const { view } = useEditorViewContext()
+  const { findEntityByPath } = useFileTreePathContext()
   const [triggered, setTriggered] = useState(false)
   const [applied, setApplied] = useState(false)
   const { messages, heading, running, finished, error, rating, setRating, suggestFix } =
@@ -101,6 +103,8 @@ export default function ErrorAssistant({
   if (
     !logEntry.level ||
     !FIXABLE_LEVELS[logEntry.level] ||
+    !logEntry.file ||
+    findEntityByPath(logEntry.file)?.type !== 'doc' ||
     !hasAiFeatures ||
     showAiFeaturesDisabled
   ) {

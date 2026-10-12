@@ -54,10 +54,10 @@ function editor() {
 
 // Creates the project with the broken main.tex, opens it and waits for the
 // compile that opening starts
-function openBrokenProject(): Cypress.Chainable<string> {
+function openBrokenProject(source = main): Cypress.Chainable<string> {
   const { waitForCompile } = prepareWaitForNextCompileSlot()
   return openInOverleaf({
-    snip_uri: dataUrl('text/plain', main),
+    snip_uri: dataUrl('text/plain', source),
     snip_name: 'main.tex',
   }).then(projectId => {
     waitForCompile(() => openProject(projectId))
@@ -161,6 +161,20 @@ describe('suggesting a fix', function () {
     cy.findByRole('button', { name: 'Compiling…' }).should('not.exist')
     cy.contains('.log-entry', 'Undefined control sequence').should('not.exist')
     cy.findByText('Last suggested fix').should('exist')
+  })
+
+  it('offers no fix for warnings from files of the TeX distribution', function () {
+    // mathptm.sty warns that it is obsolete, from the TeX Live tree
+    openBrokenProject(
+      main.replace('\\begin{document}', '\\usepackage{mathptm}\n\\begin{document}')
+    )
+    showLogs()
+    cy.contains('.log-entry', 'Package mathptm Warning')
+      .should('be.visible')
+      .and('contain.text', '/usr/local/texlive/')
+      .findByRole('button', { name: 'Suggest fix' })
+      .should('not.exist')
+    errorEntry().findByRole('button', { name: 'Suggest fix' }).should('exist')
   })
 
   it('reads the latest edits, not the last saved version', function () {
