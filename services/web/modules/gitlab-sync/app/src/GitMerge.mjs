@@ -24,7 +24,7 @@ const SyncLockManager = LockManager.withTimeout(300) // 5 min
 
 export async function doGitMerge(userId, projectId, message, claimConflictIsResolved) {
   return await SyncLockManager.promises.runWithLock(
-    'gitlabSync',
+    'gitSync', // shared with GitHub Sync, one sync per project at a time
     projectId,
     () => doGitMergeWithoutLock(userId, projectId, message, claimConflictIsResolved)
   )
