@@ -631,6 +631,29 @@ describe('syncing a linked project', function () {
     })
   })
 
+  it('does not overwrite a push to GitLab made while syncing', function () {
+    openProject(projectId)
+    editMainInOverleaf('Main from Overleaf')
+    // Lands after Overleaf saw an unchanged main, before it commits
+    mock('POST', `/repos/${fullName}/push-before-next-commit`, {
+      files: { 'main.tex': main.replace('First line', 'First line from GitLab') },
+      message: 'Main on GitLab',
+    })
+    openSyncModalInEditor()
+    syncNow()
+    syncModal().should('contain.text', 'Sorry, something went wrong')
+    mockRepo(fullName).then(repo => {
+      expect(repo.files['main.tex']).to.contain('First line from GitLab')
+      expect(repo.files['main.tex']).not.to.contain('Main from Overleaf')
+    })
+    // The next sync sees the push and merges both sides
+    syncModal().findByRole('button', { name: 'Close' }).click()
+    openSyncModalInEditor()
+    syncNow()
+    expectManualMerge()
+    projectSyncState(projectId).its('mergeStatus').should('equal', 'conflict')
+  })
+
   it('merges changes made on both sides through a merge request', function () {
     commitOnGitLab(
       { 'chapter.tex': 'Chapter from GitLab' },
@@ -1050,6 +1073,26 @@ describe('syncing a linked project', function () {
       expect(repo.files['chapter.tex']).to.equal('Chapter rewritten on GitLab')
     })
     projectSyncState(projectId).its('mergeStatus').should('equal', 'clean')
+  })
+
+  it('pushes an empty file created in Overleaf into a force-pushed branch', function () {
+    openProject(projectId)
+    openRailTab('File tree')
+    cy.findByRole('button', { name: 'New file' }).click()
+    cy.findByRole('dialog').within(() => {
+      cy.findByLabelText(/^File name$/i).clear().type('empty.tex')
+      cy.findByRole('button', { name: 'Create' }).click()
+    })
+    cy.findByRole('treeitem', { name: 'empty.tex' }).should('exist')
+    waitForProjectUpdated()
+    mock('POST', `/repos/${fullName}/force-push`, {
+      files: { 'main.tex': main, 'chapter.tex': 'Chapter rewritten on GitLab' },
+    })
+    openSyncModalInEditor()
+    syncModal().should('contain.text', 'has been force-pushed')
+    syncNow()
+    expectUpToDate()
+    mockRepo(fullName).its('files').should('have.property', 'empty.tex', '')
   })
 
   it('offers to unlink a repository the user can no longer push to', function () {

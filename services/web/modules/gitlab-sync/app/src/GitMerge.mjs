@@ -451,6 +451,7 @@ async function resolveDetachedSyncState(
     entries: conflictBaseEntries,
     message: '[Overleaf GitSync conflict resolution: restore last sync]',
     branch: defaultBranchName,
+    lastCommitId: defaultBranchHead,
   })
   const baseCommit = base.commit || defaultBranchHead
 
@@ -462,6 +463,7 @@ async function resolveDetachedSyncState(
     entries: conflictRemoteEntries,
     message: '[Overleaf GitSync conflict resolution: replay repo changes]',
     branch: defaultBranchName,
+    lastCommitId: baseCommit,
   })
   const remoteChangesCommit = remoteChanges.commit || baseCommit
 
@@ -650,6 +652,7 @@ async function commitEntries({
   message,
   branch,
   startSha,
+  lastCommitId,
 }) {
   const blobMap = { ...parentBlobMap }
   const changed = []
@@ -667,12 +670,14 @@ async function commitEntries({
   const actions = await Promise.all(
     changed.map(entry => limit(async () => {
       const exists = entry.path in parentBlobMap
-      if (!entry.sha) return { action: 'delete', file_path: entry.path }
+      // GitLab rejects the commit when the file changed after lastCommitId
+      if (!entry.sha) return { action: 'delete', file_path: entry.path, last_commit_id: lastCommitId }
       return {
         action: exists ? 'update' : 'create',
         file_path: entry.path,
         content: await entry.load(),
         encoding: 'base64',
+        last_commit_id: lastCommitId,
       }
     }))
   )
@@ -789,6 +794,7 @@ async function exportChangesToGit({
     message,
     branch,
     startSha,
+    lastCommitId: baseCommit,
   })
 
   return commit
@@ -829,7 +835,7 @@ function gitBlobSha(buffer) {
 }
 
 function gitBlobShaFromString(str) {
-  if (!str) return null
+  if (str == null) return null
   return gitBlobSha(Buffer.from(str, 'utf8'))
 }
 

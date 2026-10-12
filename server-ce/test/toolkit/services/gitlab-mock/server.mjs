@@ -590,6 +590,13 @@ const gitlab = [
     new RegExp(`${P}/repository/commits$`),
     ({ req, res, body, params: [id] }) => {
       const repo = repoFor(req, id)
+      // a push on GitLab while Overleaf was preparing this commit
+      if (repo.pushBeforeNextCommit) {
+        const { files, message } = repo.pushBeforeNextCommit
+        delete repo.pushBeforeNextCommit
+        const head = commitFiles([repo.refs.get(repo.defaultBranch)], files, message)
+        repo.refs.set(repo.defaultBranch, head)
+      }
       const { branch } = body
       let parent
       if (body.start_sha) {
@@ -619,6 +626,14 @@ const gitlab = [
         }
         if (['update', 'delete'].includes(action.action) && !exists) {
           throw new HttpError(400, "A file with this name doesn't exist")
+        }
+        // GitLab compares the last commits of the file; comparing its blobs
+        // is close enough for the mock
+        const known = action.last_commit_id && state.commits.has(action.last_commit_id)
+          ? treeOf(action.last_commit_id)[path]
+          : undefined
+        if (['update', 'delete'].includes(action.action) && known && known !== entries[path]) {
+          throw new HttpError(400, `The file has changed since you started editing it: ${path}`)
         }
         files[path] =
           action.action === 'delete'
@@ -897,6 +912,21 @@ const control = [
         }
       }
       send(res, 201, { head })
+    },
+  ],
+  // Body: { files, message } - a push to the default branch on GitLab that
+  // lands right before the next commit through the commits API, after
+  // Overleaf read the branch head
+  [
+    'POST',
+    /^\/_mock\/repos\/([^/]+)\/([^/]+)\/push-before-next-commit$/,
+    ({ res, body, params: [namespace, path] }) => {
+      const repo = controlRepo(namespace, path)
+      repo.pushBeforeNextCommit = {
+        files: body.files,
+        message: body.message || 'Commit on GitLab',
+      }
+      send(res, 204)
     },
   ],
   // A branch deleted on GitLab
