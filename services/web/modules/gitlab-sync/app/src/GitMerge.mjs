@@ -794,7 +794,7 @@ async function exportChangesToGit({
     message,
     branch,
     startSha,
-    lastCommitId: baseCommit,
+    lastCommitId: startSha ? undefined : baseCommit,
   })
 
   return commit

@@ -627,6 +627,11 @@ const gitlab = [
         if (['update', 'delete'].includes(action.action) && !exists) {
           throw new HttpError(400, "A file with this name doesn't exist")
         }
+        // GitLab checks last_commit_id against start_branch, which is unset
+        // with start_sha
+        if (action.last_commit_id && body.start_sha) {
+          throw new HttpError(400, 'last_commit_id is not checked with start_sha')
+        }
         // GitLab compares the last commits of the file; comparing its blobs
         // is close enough for the mock
         const known = action.last_commit_id && state.commits.has(action.last_commit_id)
