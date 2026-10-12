@@ -36,6 +36,7 @@ function reset() {
     tokenTtl: 7200, // seconds, like GitLab
     refreshes: 0,
     blobs: new Map(), // sha -> Buffer
+    lfsObjects: new Map(), // sha of the pointer blob -> Buffer of the file
     trees: new Map(), // sha -> { path: blobSha }
     commits: new Map(), // sha -> { tree, parents, message, author }
     repos: new Map(), // path with namespace -> repo
@@ -90,9 +91,19 @@ function putCommit({ tree, parents, message }) {
   return sha
 }
 
-// Commits a { path: content | { base64 } | { randomBytes } | null } change
-// on top of the parents, the first of which the tree starts from.
-// randomBytes makes a file of that size that does not compress.
+// A Git LFS pointer to the file, which the tree holds instead of it
+function putLfsObject(buffer) {
+  const oid = crypto.createHash('sha256').update(buffer).digest('hex')
+  const pointer = `version https://git-lfs.github.com/spec/v1\noid sha256:${oid}\nsize ${buffer.length}\n`
+  const sha = putBlob(Buffer.from(pointer))
+  state.lfsObjects.set(sha, buffer)
+  return sha
+}
+
+// Commits a { path: content | { base64 } | { randomBytes } | { lfs } | null }
+// change on top of the parents, the first of which the tree starts from.
+// randomBytes makes a file of that size that does not compress; lfs, a file
+// tracked by Git LFS with that content.
 function commitFiles(parents, files, message) {
   const entries = parents.length ? { ...treeOf(parents[0]) } : {}
   for (const [path, content] of Object.entries(files)) {
@@ -101,6 +112,7 @@ function commitFiles(parents, files, message) {
       entries[path] = putBlob(Buffer.from(content.base64, 'base64'))
     else if (content.randomBytes)
       entries[path] = putBlob(crypto.randomBytes(content.randomBytes))
+    else if (content.lfs) entries[path] = putLfsObject(Buffer.from(content.lfs))
     else entries[path] = putBlob(Buffer.from(content))
   }
   return putCommit({ tree: putTree(entries), parents, message })
@@ -749,7 +761,15 @@ const gitlab = [
       const commit = resolveRef(repo, url.searchParams.get('sha') || repo.defaultBranch)
       if (!commit) throw new HttpError(404, '404 Not Found')
       const folder = `${repo.path}-${commit}-${commit}`
-      send(res, 200, zipball(folder, treeOf(commit)), {
+      // like GitLab, the archive has the LFS files instead of their pointers
+      // unless include_lfs_blobs=false
+      const entries = { ...treeOf(commit) }
+      if (url.searchParams.get('include_lfs_blobs') !== 'false') {
+        for (const [path, sha] of Object.entries(entries)) {
+          if (state.lfsObjects.has(sha)) entries[path] = putBlob(state.lfsObjects.get(sha))
+        }
+      }
+      send(res, 200, zipball(folder, entries), {
         'Content-Type': 'application/zip',
       })
     },

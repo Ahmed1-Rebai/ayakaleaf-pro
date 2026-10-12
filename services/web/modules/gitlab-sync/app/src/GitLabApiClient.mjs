@@ -582,6 +582,9 @@ async function isBranchMerged(token, repoFullName, { base, baseHead, branch, bra
 function getRepoZipball(token, repoFullName, sha) {
   const url = new URL(`${projectUrl(repoFullName)}/repository/archive.zip`)
   url.searchParams.set('sha', sha)
+  // Git LFS is not supported: import LFS pointers as files, like pulls do
+  // (GitLab 17.9+, before it the archive always has the LFS files)
+  url.searchParams.set('include_lfs_blobs', 'false')
 
   return fetchGitLabStream(url.toString(), {
     headers: buildHeaders(token),

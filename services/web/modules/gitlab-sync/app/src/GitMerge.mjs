@@ -746,23 +746,21 @@ async function exportChangesToGit({
     currentVersion
   )
 
-  const { paths } = await HistoryManager.getPathsAtVersion(projectId, lastSyncVersion)
-  const existedAtLastSync = new Set(paths)
-
   const deletePaths = new Set()
   const upsertPaths = new Set()
 
   for (const item of diff) {
     const oldPath = item.pathname
 
+    // commitEntries skips the paths missing from GitLab, such as files
+    // created after the last sync
     if (item.operation === 'removed') {
-      // it can happen that removed file was created after last sync
-      if (existedAtLastSync.has(oldPath)) deletePaths.add(oldPath)
+      deletePaths.add(oldPath)
       continue
     }
 
     if (item.operation === 'renamed') {
-      if (existedAtLastSync.has(oldPath)) deletePaths.add(oldPath)
+      deletePaths.add(oldPath)
       upsertPaths.add(item.newPathname)
       continue
     }

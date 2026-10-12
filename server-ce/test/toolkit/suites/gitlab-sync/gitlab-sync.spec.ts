@@ -22,7 +22,12 @@ const GITLAB_GROUP = 'e2e-group'
 
 // File contents for the mock: text, binary, generated random bytes, or null
 // to delete the file
-type Change = string | { base64: string } | { randomBytes: number } | null
+type Change =
+  | string
+  | { base64: string }
+  | { randomBytes: number }
+  | { lfs: string }
+  | null
 
 type MockCommit = {
   id: string
@@ -438,6 +443,47 @@ describe('importing a repository', function () {
       })
     })
   })
+
+  it('imports files tracked by Git LFS as their pointers, as syncs pull them', function () {
+    const name = projectName('Lfs')
+    const fullName = `${GITLAB_USER}/${name.toLowerCase()}`
+    seedRepo(name, {
+      'main.tex': [
+        '\\documentclass{article}',
+        '\\begin{document}',
+        '\\section{Introduction}',
+        '\\end{document}',
+      ].join('\n'),
+      'data.txt': { lfs: 'Large data' },
+    })
+    linkGitLabAccount()
+    postWithCsrf('/project/new/gitlab-sync', {
+      name,
+      fullName,
+      defaultBranchName: 'main',
+    }).then(response => {
+      expect(response.status).to.equal(200)
+      const projectId = response.body.projectId
+      mock('POST', `/repos/${fullName}/commits`, {
+        files: { 'notes.txt': 'Notes' },
+        message: 'Add notes',
+      })
+      openProject(projectId)
+      openRailTab('File tree')
+      cy.findByRole('treeitem', { name: 'data.txt' }).click()
+      cy.get('.cm-content').should('contain.text', 'oid sha256:')
+      openSyncModalInEditor()
+      syncModal().findByRole('button', { name: 'Sync' }).click()
+      syncModal()
+        .findByText('No new commits in GitLab since last merge.')
+        .should('exist')
+      // the pull left the pointer alone, so nothing went back to GitLab
+      mockRepo(fullName).then(repo => {
+        expect(repo.files['data.txt']).to.match(/^version https:\/\/git-lfs\.github\.com\/spec\/v1\n/)
+        expect(repo.commits.map(c => c.message)).not.to.include('Updates from Overleaf')
+      })
+    })
+  })
 })
 
 describe('syncing a linked project', function () {
@@ -453,6 +499,9 @@ describe('syncing a linked project', function () {
     'main.tex': main,
     'chapter.tex': 'Chapter text',
     'notes.txt': 'Notes',
+    // not imported: Overleaf ignores dotfiles
+    '.gitignore': '*.aux',
+    '.gitlab-ci.yml': 'build:\n  script: latexmk',
   }
 
   let name: string
@@ -654,11 +703,10 @@ describe('syncing a linked project', function () {
     projectSyncState(projectId).its('mergeStatus').should('equal', 'conflict')
   })
 
-  it('keeps edits made in Overleaf while pulling for the next sync', function () {
-    commitOnGitLab({ 'chapter.tex': 'Chapter from GitLab' }, 'Chapter on GitLab')
-    openProject(projectId)
-    // The pull waits on downloading chapter.tex; the page's own request is
-    // not awaited so that the edit below lands in the middle of it
+  // Syncs, typing in main.tex while the pull downloads the first file
+  function pullWhileEditing() {
+    // The pull waits on that download; the page's own request is not
+    // awaited so that the edit below lands in the middle of it
     mock('POST', '/delay-next-download', { ms: 8000 })
     cy.get('meta[name="ol-csrfToken"]')
       .invoke('attr', 'content')
@@ -685,6 +733,12 @@ describe('syncing a linked project', function () {
       .then(win => cy.wrap((win as any).pull, { timeout: 30000 }))
       .its('mergeStatus')
       .should('equal', 'clean')
+  }
+
+  it('keeps edits made in Overleaf while pulling for the next sync', function () {
+    commitOnGitLab({ 'chapter.tex': 'Chapter from GitLab' }, 'Chapter on GitLab')
+    openProject(projectId)
+    pullWhileEditing()
     mockRepo(fullName).then(repo => {
       expect(repo.files['main.tex']).not.to.contain('Written while pulling')
       expect(repo.files['chapter.tex']).to.equal('Chapter from GitLab')
@@ -698,6 +752,33 @@ describe('syncing a linked project', function () {
       expect(repo.files['main.tex']).to.contain('First line\nWritten while pulling')
       expect(repo.files['chapter.tex']).to.equal('Chapter from GitLab')
     })
+  })
+
+  it('pushes a file pulled while editing, then deleted in Overleaf', function () {
+    commitOnGitLab({ 'appendix.tex': 'Appendix from GitLab' }, 'Add appendix')
+    openProject(projectId)
+    pullWhileEditing()
+    openFile('appendix.tex')
+    cy.findByRole('button', { name: 'Open appendix.tex action menu' }).click()
+    cy.findByRole('menuitem', { name: 'Delete' }).click()
+    cy.findByRole('dialog').findByRole('button', { name: 'Delete' }).click()
+    cy.findByRole('treeitem', { name: 'appendix.tex' }).should('not.exist')
+    waitForProjectUpdated()
+
+    openSyncModalInEditor()
+    syncNow()
+    expectUpToDate()
+    mockRepo(fullName).then(repo => {
+      expect(Object.keys(repo.files).sort()).to.deep.equal([
+        '.gitignore',
+        '.gitlab-ci.yml',
+        'chapter.tex',
+        'main.tex',
+        'notes.txt',
+      ])
+      expect(repo.files['main.tex']).to.contain('Written while pulling')
+    })
+    entityPaths().should('not.include', '/appendix.tex')
   })
 
   it('merges changes made on both sides through a merge request', function () {
@@ -1065,6 +1146,8 @@ describe('syncing a linked project', function () {
     expectUpToDate()
     mockRepo(fullName).then(repo => {
       expect(Object.keys(repo.files).sort()).to.deep.equal([
+        '.gitignore',
+        '.gitlab-ci.yml',
         'main.tex',
         'part.tex',
       ])
