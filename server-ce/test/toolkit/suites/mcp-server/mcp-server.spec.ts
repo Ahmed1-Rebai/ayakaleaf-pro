@@ -159,7 +159,10 @@ describe('MCP server of a project', function () {
         'get_clone_info',
         'get_compile_log',
         'get_output_file_link',
+        'get_settings',
+        'list_versions',
         'set_compiler',
+        'word_count',
       ])
   })
 
@@ -229,6 +232,51 @@ describe('MCP server of a project', function () {
         expect(result.content[0].text).to.contain('Output written on output.pdf')
       })
     })
+  })
+
+  it('counts the words of what was pushed', function () {
+    compile(projectId, ownerToken).then(build => {
+      callTool(projectId, ownerToken, 'word_count', {
+        clsiServerId: build.clsiServerId,
+      })
+        .then(toolJson)
+        .its('textWords')
+        .should('equal', 3)
+    })
+  })
+
+  it('reads the project settings', function () {
+    callTool(projectId, viewerToken, 'get_settings')
+      .then(toolJson)
+      .should(settings => {
+        expect(settings).to.include({
+          mainDocument: 'main.tex',
+          spellCheckLanguage: 'en',
+        })
+        expect(settings.compiler).to.be.a('string')
+        expect(settings.availableTexLiveImages).to.be.an('array')
+      })
+  })
+
+  it('lists the versions saved in the history', function () {
+    login(owner)
+    cy.visit(`/project/${projectId}`)
+    cy.request(`/project/${projectId}/updates?min_count=1`)
+      .its('body.updates.0.toV')
+      .then(version =>
+        requestWithCsrf('POST', `/project/${projectId}/labels`, {
+          comment: 'Submitted draft',
+          version,
+        })
+          .its('status')
+          .should('equal', 200)
+      )
+    callTool(projectId, viewerToken, 'list_versions')
+      .then(toolJson)
+      .then((versions: { comment: string }[]) =>
+        versions.map(version => version.comment)
+      )
+      .should('include', 'Submitted draft')
   })
 
   it('downloads the PDF through a link for this project only', function () {

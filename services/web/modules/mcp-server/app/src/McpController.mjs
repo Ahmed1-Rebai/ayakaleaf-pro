@@ -3,6 +3,7 @@ import { pipeline } from 'stream/promises'
 import Settings from '@overleaf/settings'
 import logger from '@overleaf/logger'
 import { expressify } from '@overleaf/promise-utils'
+import { fetchJson } from '@overleaf/fetch-utils'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { z, zz } from '../../../../app/src/infrastructure/Validation.mjs'
@@ -11,6 +12,8 @@ import AuthorizationManager from '../../../../app/src/Features/Authorization/Aut
 import CompileManager from '../../../../app/src/Features/Compile/CompileManager.mjs'
 import ClsiManager from '../../../../app/src/Features/Compile/ClsiManager.mjs'
 import EditorController from '../../../../app/src/Features/Editor/EditorController.mjs'
+import ProjectGetter from '../../../../app/src/Features/Project/ProjectGetter.mjs'
+import ProjectEntityHandler from '../../../../app/src/Features/Project/ProjectEntityHandler.mjs'
 import Errors from '../../../../app/src/Features/Errors/Errors.js'
 
 const DOWNLOAD_AUDIENCE = 'mcp-download'
@@ -123,6 +126,85 @@ function createServer(userId, projectId) {
         { audience: DOWNLOAD_AUDIENCE, expiresIn: DOWNLOAD_LINK_TTL }
       )
       return text(`${Settings.siteUrl}/project/${projectId}/mcp/download/${token}`)
+    }
+  )
+
+  server.registerTool(
+    'get_settings',
+    {
+      description:
+        'Read the project settings: compiler, TeX Live image, main ' +
+        'document, main bibliography and spell check language, and the ' +
+        'TeX Live images this Overleaf offers.',
+    },
+    async () => {
+      const project = await ProjectGetter.promises.getProject(projectId, {
+        compiler: 1,
+        imageName: 1,
+        rootDoc_id: 1,
+        mainBibliographyDoc_id: 1,
+        spellCheckLanguage: 1,
+        rootFolder: 1,
+      })
+      const { docs } = ProjectEntityHandler.getAllEntitiesFromProject(project)
+      // paths as in the git clone, without the leading /
+      const docPath = docId =>
+        docs.find(({ doc }) => docId?.equals(doc._id))?.path.slice(1) ?? null
+      return text({
+        compiler: project.compiler,
+        texLiveImage: project.imageName ?? null,
+        mainDocument: docPath(project.rootDoc_id),
+        mainBibliography: docPath(project.mainBibliographyDoc_id),
+        spellCheckLanguage: project.spellCheckLanguage,
+        availableTexLiveImages: (Settings.allowedImageNames || []).map(
+          ({ imageName, imageDesc }) => ({ imageName, imageDesc })
+        ),
+      })
+    }
+  )
+
+  server.registerTool(
+    'word_count',
+    {
+      description:
+        'Count the words of the main document, or of another .tex file, ' +
+        'with texcount. Compile first.',
+      inputSchema: {
+        file: zz
+          .filepath()
+          .optional()
+          .describe('A .tex file of the project, the main document by default.'),
+        clsiServerId,
+      },
+    },
+    async ({ file, clsiServerId }) => {
+      const { texcount } = await CompileManager.promises.wordCount(
+        projectId,
+        compileUserId(userId),
+        file || false,
+        clsiServerId
+      )
+      return text(texcount)
+    }
+  )
+
+  server.registerTool(
+    'list_versions',
+    {
+      description:
+        'List the versions saved in the project history, with their comment.',
+    },
+    async () => {
+      const labels = await fetchJson(
+        `${Settings.apis.project_history.url}/project/${projectId}/labels`
+      )
+      return text(
+        labels.map(({ version, comment, created_at: createdAt }) => ({
+          version,
+          comment,
+          createdAt,
+        }))
+      )
     }
   )
 
