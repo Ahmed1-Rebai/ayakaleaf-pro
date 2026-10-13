@@ -24,15 +24,17 @@
 ## Ayakaleaf Pro Edition
 Ayakaleaf Pro is an enhanced version of Overleaf with almost all features and capabilities. For details, please check [Ayakaleaf Pro](https://ayakaleaf-pro.ayaka.space) page. Features in Ayakaleaf Pro include: 
 
-- AI Chat Assistant (Features in SaaS Platform)
-- Error Assistant (Features in SaaS Platform)
-- Pandoc Import/Export (Features in SaaS Platform)
-- Python Script Runner (Features in SaaS Platform)
-- 2-way GitHub(Enterprise) Sync (Features in SaaS Platform)
+- MCP Server (Let AI Agents Edit, Compile and Comment)
+- AI Chat Assistant (Chat, Edit and Fix with AI)
+- Error Assistant (Explain and Fix Compile Errors)
+- Pandoc Import/Export (Convert Word, Markdown and LaTeX)
+- Python Script Runner (Run Python in Your Project)
+- 2-way GitHub(Enterprise) Sync (Push and Pull with GitHub)
+- 2-way GitLab Sync (GitLab.com or Self-hosted GitLab)
 - Zotero Integration(With Zotero OAuth Support)
 - Mendeley Integration(With Mendeley OAuth Support)
-- Advanced Reference Search (Features in SaaS Platform)
-- Git-Bridge Support (Features in Server Pro)
+- Advanced Reference Search (Search All Your Bib Entries)
+- Git-Bridge Support (Clone, Pull and Push with Git)
 - Admin Panel (Global Users/Projects management)
 - SSO with LDAP and SAML or OAuth 2.0
 - Unlimited Compile Times (Adjustable in admin panel)
@@ -41,7 +43,7 @@ Ayakaleaf Pro is an enhanced version of Overleaf with almost all features and ca
 - Template System (With Template Gallery)
 - Track Changes (With Review and Comment Panel)
 - Full Project History(With Restore and Download)
-- Symbol Palette (Features in Server Pro/SaaS Platform)
+- Symbol Palette (Insert Math Symbols in One Click)
 - ARM Support(x86_64/arm64 on Docker)
 
 Last but not least, Ayakaleaf Pro is open-source, free to use and modify. You can self-host it and contribute to the development of Ayakaleaf Pro. For more details, please check [Developer Documentation](https://ayakaleaf-pro.ayaka.space/dev) page.
