@@ -43,6 +43,7 @@ jobs:
             symbol-palette,
             template-gallery,
             git-bridge,
+            mcp-server,
             oauth2-server,
             track-changes,
             open-in-overleaf,
