@@ -2,7 +2,11 @@ import logger from '@overleaf/logger'
 import Settings from '@overleaf/settings'
 import OError from '@overleaf/o-error'
 import { HttpsProxyAgent } from 'https-proxy-agent'
-import { fetchJson, fetchStringWithResponse } from '@overleaf/fetch-utils'
+import {
+  CustomHttpsAgent,
+  fetchJson,
+  fetchStringWithResponse,
+} from '@overleaf/fetch-utils'
 import { User } from '../../../../app/src/models/User.mjs'
 import { createAccessTokenEncryptor } from './AccessTokenEncryptorHelper.mjs'
 
@@ -20,10 +24,12 @@ const mendeleyProxyAgent = process.env.MENDELEY_PROXY_URL
   ? new HttpsProxyAgent(process.env.MENDELEY_PROXY_URL)
   : undefined
 
+// fetch-utils' default agent gives up connecting after 1s, which is meant for
+// internal services; reaching Mendeley can take longer from some networks.
+const mendeleyDirectAgent = new CustomHttpsAgent({ connectTimeout: 10_000 })
+
 function withProxy(options) {
-  return mendeleyProxyAgent
-    ? { ...options, agent: mendeleyProxyAgent }
-    : options
+  return { ...options, agent: mendeleyProxyAgent || mendeleyDirectAgent }
 }
 
 function _basicAuthHeader() {

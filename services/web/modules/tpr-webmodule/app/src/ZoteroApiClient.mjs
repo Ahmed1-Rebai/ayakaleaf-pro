@@ -4,6 +4,7 @@ import Settings from '@overleaf/settings'
 import OError from '@overleaf/o-error'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import {
+  CustomHttpsAgent,
   fetchJson,
   fetchNothing,
   fetchString,
@@ -25,8 +26,12 @@ const zoteroProxyAgent = process.env.ZOTERO_PROXY_URL
   ? new HttpsProxyAgent(process.env.ZOTERO_PROXY_URL)
   : undefined
 
+// fetch-utils' default agent gives up connecting after 1s, which is meant for
+// internal services; reaching Zotero can take longer from some networks.
+const zoteroDirectAgent = new CustomHttpsAgent({ connectTimeout: 10_000 })
+
 function withProxy(options) {
-  return zoteroProxyAgent ? { ...options, agent: zoteroProxyAgent } : options
+  return { ...options, agent: zoteroProxyAgent || zoteroDirectAgent }
 }
 
 /**
