@@ -190,6 +190,24 @@ describe('linking the GitHub account', function () {
     githubWidget().findByRole('link', { name: 'Link' }).should('exist')
     connectionStatus().should('equal', false)
   })
+
+  describe('when connecting to GitHub takes over a second', function () {
+    afterEach(function () {
+      mock('POST', '/connect-delay', { ms: 0 })
+    })
+
+    it('links the account and unlinks it again', function () {
+      // fetch-utils' default agent gives up connecting after 1s
+      mock('POST', '/connect-delay', { ms: 1200 })
+      linkGitHubAccount()
+      connectionStatus().should('equal', true)
+
+      githubWidget().findByRole('button', { name: 'Unlink' }).click()
+      cy.findByRole('dialog').findByRole('button', { name: 'Unlink' }).click()
+      githubWidget().findByRole('link', { name: 'Link' }).should('exist')
+      connectionStatus().should('equal', false)
+    })
+  })
 })
 
 describe('linking a project to a repository', function () {

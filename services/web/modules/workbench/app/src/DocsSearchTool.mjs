@@ -2,7 +2,19 @@ import { tool } from 'ai'
 import { z } from 'zod'
 import Settings from '@overleaf/settings'
 import logger from '@overleaf/logger'
-import { fetchString } from '@overleaf/fetch-utils'
+import {
+  CustomHttpAgent,
+  CustomHttpsAgent,
+  fetchString,
+} from '@overleaf/fetch-utils'
+
+// fetch-utils' default agent gives up connecting after 1s, too short for
+// external APIs, so these requests get a 3s connect timeout instead
+const MAX_CONNECT_TIME = 3000
+const httpAgent = new CustomHttpAgent({ connectTimeout: MAX_CONNECT_TIME })
+const httpsAgent = new CustomHttpsAgent({ connectTimeout: MAX_CONNECT_TIME })
+const agent = url => (url.protocol === 'https:' ? httpsAgent : httpAgent)
+const REQUEST_TIMEOUT_MS = 30 * 1000
 
 /**
  * Searches the configured documentation site through its GitBook MCP endpoint.
@@ -36,6 +48,8 @@ function _parseMcpResponse(raw) {
 
 async function _searchDocumentation(query) {
   const raw = await fetchString(Settings.workbenchDocsSearch.mcpUrl, {
+    agent,
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

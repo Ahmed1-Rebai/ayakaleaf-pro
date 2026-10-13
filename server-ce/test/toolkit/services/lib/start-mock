@@ -24,6 +24,7 @@ done
 docker run --detach --name "e2e-$name" \
   --network "$TOOLKIT_NETWORK" \
   "${aliases[@]}" \
+  --cap-add NET_ADMIN \
   --env-file "$state/mock.env" \
   --volume "$services/$name/server.mjs:/mock/server.mjs:ro" \
   --volume "$services/lib:/mock/lib:ro" \

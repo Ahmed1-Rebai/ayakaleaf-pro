@@ -397,6 +397,73 @@ describe('the AI assistant', function () {
     ask('Hello again?')
     panel().should('contain.text', 'Working again.')
   })
+
+  describe('when connecting takes over a second', function () {
+    afterEach(function () {
+      aiMock('POST', '/connect-delay', { ms: 0 })
+    })
+
+    it('searches the web through Tavily', function () {
+      // fetch-utils' default agent gives up connecting after 1s
+      aiMock('POST', '/connect-delay', { ms: 1200 })
+      aiMock('PUT', '/web-results', {
+        results: [
+          {
+            title: 'E2E news',
+            url: 'https://news.example.com/e2e',
+            content: 'The e2e tests passed today.',
+          },
+        ],
+      })
+      queueReplies(
+        { toolCalls: [{ name: 'web_search', args: { query: 'e2e news' } }] },
+        { text: 'The news says the tests passed.' }
+      )
+      openAssistant()
+      ask('Any news?')
+
+      panel().should('contain.text', 'The news says the tests passed.')
+      chatRequests().then(requests => {
+        expect(toolResults(requests[1])).to.contain(
+          'The e2e tests passed today.'
+        )
+      })
+    })
+
+    it('searches the documentation through its MCP endpoint', function () {
+      // fetch-utils' default agent gives up connecting after 1s
+      aiMock('POST', '/connect-delay', { ms: 1200 })
+      aiMock('PUT', '/docs-pages', {
+        pages: [
+          {
+            title: 'Sharing a project',
+            link: 'https://docs.overleaf.com/sharing',
+            content: 'Click Share to invite collaborators.',
+          },
+        ],
+      })
+      queueReplies(
+        {
+          toolCalls: [
+            {
+              name: 'search_documentation',
+              args: { query: 'share a project' },
+            },
+          ],
+        },
+        { text: 'Use the Share button.' }
+      )
+      openAssistant()
+      ask('How do I share a project?')
+
+      panel().should('contain.text', 'Use the Share button.')
+      chatRequests().then(requests => {
+        expect(toolResults(requests[1])).to.contain(
+          'Click Share to invite collaborators.'
+        )
+      })
+    })
+  })
 })
 
 describe('AI consent', function () {

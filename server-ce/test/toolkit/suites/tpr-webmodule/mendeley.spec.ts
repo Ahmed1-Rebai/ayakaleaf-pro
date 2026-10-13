@@ -332,4 +332,27 @@ describe('importing from Mendeley', function () {
       )
     })
   })
+
+  describe('when connecting to Mendeley takes over a second', function () {
+    afterEach(function () {
+      tprMock('POST', '/connect-delay', { ms: 0 })
+    })
+
+    it('lists the groups and imports one of them', function () {
+      linkAndOpenProject()
+      // fetch-utils' default agent gives up connecting after 1s
+      tprMock('POST', '/connect-delay', { ms: 1200 })
+      setGroups('mendeley', [
+        { id: 'grp-1', name: 'E2E Group', entries: [bibEntry('ours')] },
+      ])
+      importFromProvider('mendeley', {
+        name: 'group.bib',
+        library: 'E2E Group',
+      }).then(name => {
+        linkedFileContent(projectId, name).then(bibtex => {
+          expect(bibtex).to.contain('@article{ours,')
+        })
+      })
+    })
+  })
 })

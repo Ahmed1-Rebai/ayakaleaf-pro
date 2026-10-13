@@ -4,6 +4,8 @@ import Settings from '@overleaf/settings'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 
 import {
+  CustomHttpAgent,
+  CustomHttpsAgent,
   fetchJson,
   fetchJsonWithResponse,
   fetchStreamWithResponse,
@@ -39,8 +41,19 @@ const githubProxyAgent = process.env.GITHUB_SYNC_PROXY_URL
   ? new HttpsProxyAgent(process.env.GITHUB_SYNC_PROXY_URL)
   : undefined
 
+// fetch-utils' default agent gives up connecting after 1s, too short for
+// external APIs, so direct requests get a 3s connect timeout instead
+const MAX_CONNECT_TIME = 3000
+const httpAgent = new CustomHttpAgent({ connectTimeout: MAX_CONNECT_TIME })
+const httpsAgent = new CustomHttpsAgent({ connectTimeout: MAX_CONNECT_TIME })
+
 function withProxy(options) {
-  return githubProxyAgent ? { ...options, agent: githubProxyAgent } : options
+  return {
+    ...options,
+    agent:
+      githubProxyAgent ||
+      (url => (url.protocol === 'https:' ? httpsAgent : httpAgent)),
+  }
 }
 
 function buildHeaders(token) {
