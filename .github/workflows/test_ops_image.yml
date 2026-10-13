@@ -49,6 +49,7 @@ jobs:
             learn,
             reference-picker,
             github-sync,
+            gitlab-sync,
             tpr-webmodule,
             python-runner,
             workbench,

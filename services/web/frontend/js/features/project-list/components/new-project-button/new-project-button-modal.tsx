@@ -15,6 +15,7 @@ export type NewProjectButtonModalVariant =
   | 'example_project'
   | 'upload_project'
   | 'import_from_github'
+  | 'import_from_gitlab'
   | 'import_docx'
   | 'import_markdown'
 
@@ -35,6 +36,12 @@ function NewProjectButtonModal({
   const ImportProjectFromGithubModalWrapper: JSXElementConstructor<{
     onHide: () => void
   }> = importProjectFromGithubModalWrapper?.import.default
+  const [importProjectFromGitlabModalWrapper] = importOverleafModules(
+    'importProjectFromGitlabModalWrapper'
+  )
+  const ImportProjectFromGitlabModalWrapper: JSXElementConstructor<{
+    onHide: () => void
+  }> = importProjectFromGitlabModalWrapper?.import.default
 
   const location = useLocation()
 
@@ -82,6 +89,8 @@ function NewProjectButtonModal({
       )
     case 'import_from_github':
       return <ImportProjectFromGithubModalWrapper onHide={onHide} />
+    case 'import_from_gitlab':
+      return <ImportProjectFromGitlabModalWrapper onHide={onHide} />
     default:
       return null
   }

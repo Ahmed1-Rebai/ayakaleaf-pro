@@ -7,6 +7,8 @@ import { isConfigured } from '../../../workbench/app/src/WorkbenchAiClient.mjs'
 // (Need login to avoid abuse)
 // 1. githubSync: whether GitHub Sync is enabled
 //    (env var GITHUB_SYNC_ENABLED; via Features.hasFeature, same as git-bridge)
+//    gitlabSync: whether GitLab Sync is enabled (env var GITLAB_SYNC_ENABLED;
+//    the gitlab-sync module sets Settings.gitlabSync only when enabled)
 // 2. zotero / mendeley: whether each reference-manager integration is enabled
 //    (env var ENABLED_LINKED_FILE_TYPES includes the provider name; no Features
 //    case exists for them, so we read the setting directly)
@@ -20,6 +22,7 @@ export default {
         res.json({
           ai: isConfigured(),
           githubSync: Features.hasFeature('github-sync'),
+          gitlabSync: Boolean(Settings.gitlabSync),
           zotero: Boolean(Settings.enabledLinkedFileTypes?.includes('zotero')),
           mendeley: Boolean(
             Settings.enabledLinkedFileTypes?.includes('mendeley')
