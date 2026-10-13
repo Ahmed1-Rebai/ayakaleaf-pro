@@ -8,6 +8,7 @@ import JsonWebToken from '../../../../app/src/infrastructure/JsonWebToken.mjs'
 import AuthorizationManager from '../../../../app/src/Features/Authorization/AuthorizationManager.mjs'
 import ClsiManager from '../../../../app/src/Features/Compile/ClsiManager.mjs'
 import Errors from '../../../../app/src/Features/Errors/Errors.js'
+import UserGetter from '../../../../app/src/Features/User/UserGetter.mjs'
 import {
   DOWNLOAD_AUDIENCE,
   buildCompileTools,
@@ -95,7 +96,8 @@ async function downloadOutputFile(req, res) {
     return res.sendStatus(404)
   }
   // the user may have lost access since the link was made
-  if (!(await AuthorizationManager.promises.canUserReadProject(userId, projectId))) {
+  const user = await UserGetter.promises.getUser(userId, { suspended: 1 })
+  if (!user || user.suspended || !(await AuthorizationManager.promises.canUserReadProject(userId, projectId))) {
     return res.sendStatus(404)
   }
 
