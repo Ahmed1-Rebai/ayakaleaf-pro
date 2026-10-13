@@ -2,7 +2,12 @@ import logger from '@overleaf/logger'
 import Settings from '@overleaf/settings'
 import OError from '@overleaf/o-error'
 import { HttpsProxyAgent } from 'https-proxy-agent'
-import { fetchJson, fetchStringWithResponse } from '@overleaf/fetch-utils'
+import {
+  CustomHttpAgent,
+  CustomHttpsAgent,
+  fetchJson,
+  fetchStringWithResponse,
+} from '@overleaf/fetch-utils'
 import { User } from '../../../../app/src/models/User.mjs'
 import { createAccessTokenEncryptor } from './AccessTokenEncryptorHelper.mjs'
 
@@ -20,10 +25,19 @@ const mendeleyProxyAgent = process.env.MENDELEY_PROXY_URL
   ? new HttpsProxyAgent(process.env.MENDELEY_PROXY_URL)
   : undefined
 
+// fetch-utils' default agent gives up connecting after 1s, too short for
+// external APIs, so direct requests get a 3s connect timeout instead
+const MAX_CONNECT_TIME = 3000
+const httpAgent = new CustomHttpAgent({ connectTimeout: MAX_CONNECT_TIME })
+const httpsAgent = new CustomHttpsAgent({ connectTimeout: MAX_CONNECT_TIME })
+
 function withProxy(options) {
-  return mendeleyProxyAgent
-    ? { ...options, agent: mendeleyProxyAgent }
-    : options
+  return {
+    ...options,
+    agent:
+      mendeleyProxyAgent ||
+      (url => (url.protocol === 'https:' ? httpsAgent : httpAgent)),
+  }
 }
 
 function _basicAuthHeader() {

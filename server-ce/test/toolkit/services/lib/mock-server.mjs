@@ -4,9 +4,13 @@
 // certificate from bin/make-tls; port 8080 is the plain HTTP control API
 // the tests use.
 
+import { execFile } from 'node:child_process'
 import fs from 'node:fs'
 import http from 'node:http'
 import https from 'node:https'
+import { promisify } from 'node:util'
+
+const run = promisify(execFile)
 
 export class HttpError extends Error {
   constructor(status, message, extra = {}) {
@@ -81,6 +85,37 @@ function serve(routes) {
   }
 }
 
+// Makes connecting to the mock slow, like a far away service: its SYN-ACKs
+// from port 443 leave ms later, everything else at full speed. 0 turns it
+// off. Needs NET_ADMIN (lib/start-mock) and tc, installed on first use.
+async function setConnectDelay(ms) {
+  if (ms) {
+    await run('sh', ['-c', 'command -v tc || apk add --no-cache iproute2-tc'])
+  }
+  // Fails when there is nothing to remove, or no tc as it was never used
+  await run('tc', ['qdisc', 'del', 'dev', 'eth0', 'root']).catch(() => {})
+  if (!ms) return
+  const tc = args => run('tc', args.split(' '))
+  await tc('qdisc add dev eth0 root handle 1: prio')
+  await tc(`qdisc add dev eth0 parent 1:3 handle 30: netem delay ${ms}ms`)
+  // IPv4 without options, TCP from port 443 with only SYN and ACK set
+  await tc(
+    'filter add dev eth0 parent 1: protocol ip u32 match ip protocol 6 0xff ' +
+      'match u8 0x05 0x0f at 0 match u16 443 0xffff at 20 ' +
+      'match u8 0x12 0xff at 33 flowid 1:3'
+  )
+}
+
+// Body: { ms }
+const connectDelay = [
+  'POST',
+  /^\/_mock\/connect-delay$/,
+  async ({ res, body }) => {
+    await setConnectDelay(Number(body.ms) || 0)
+    send(res, 204)
+  },
+]
+
 export function listen({ name, routes, control, tlsDir = '/tls' }) {
   https
     .createServer(
@@ -91,6 +126,6 @@ export function listen({ name, routes, control, tlsDir = '/tls' }) {
       serve(routes)
     )
     .listen(443)
-  http.createServer(serve(control)).listen(8080)
+  http.createServer(serve([connectDelay, ...control])).listen(8080)
   console.log(`${name} listening on 443 (TLS) and 8080 (control)`)
 }

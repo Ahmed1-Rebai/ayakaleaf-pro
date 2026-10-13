@@ -313,4 +313,26 @@ describe('importing from Zotero', function () {
       )
     })
   })
+
+  describe('when connecting to Zotero takes over a second', function () {
+    afterEach(function () {
+      tprMock('POST', '/connect-delay', { ms: 0 })
+    })
+
+    it('lists the groups and imports one of them', function () {
+      // fetch-utils' default agent gives up connecting after 1s (#105)
+      tprMock('POST', '/connect-delay', { ms: 1200 })
+      setGroups('zotero', [
+        { id: '424242', name: 'E2E Group', entries: [bibEntry('ours')] },
+      ])
+      importFromProvider('zotero', {
+        name: 'group.bib',
+        library: 'E2E Group',
+      }).then(name => {
+        linkedFileContent(projectId, name).then(bibtex => {
+          expect(bibtex).to.contain('@article{ours,')
+        })
+      })
+    })
+  })
 })
