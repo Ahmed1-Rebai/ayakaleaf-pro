@@ -27,6 +27,7 @@ it('reports every feature on', function () {
   cy.request('/system/features').its('body').should('deep.equal', {
     ai: true,
     githubSync: true,
+    gitlabSync: true,
     zotero: true,
     mendeley: true,
   })
