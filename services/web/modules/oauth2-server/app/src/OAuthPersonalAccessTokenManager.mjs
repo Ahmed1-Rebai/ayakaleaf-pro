@@ -106,9 +106,6 @@ const PersonalAccessTokenManager = {
 
     // Verify a personal access token
     async verifyToken(accessToken) {
-        logger.debug({ accessToken }, 'Verifying personal access token')
-        logger.debug({ hashedToken: SecretsHelper.hashSecret(accessToken) }, 'Hashed personal access token for verification')
-
         let query = {
             accessToken: SecretsHelper.hashSecret(accessToken)
         }
@@ -126,6 +123,13 @@ const PersonalAccessTokenManager = {
         let now = new Date()
         if (tokenInstance.accessTokenExpiresAt < now) {
             logger.debug({}, 'Personal access token is expired')
+            return null
+        }
+
+        // Reject tokens of suspended or deleted users
+        let user = await db.users.findOne({ _id: tokenInstance.user_id }, { projection: { suspended: 1 } })
+        if (!user || user.suspended) {
+            logger.debug({}, 'Personal access token user is suspended or deleted')
             return null
         }
 

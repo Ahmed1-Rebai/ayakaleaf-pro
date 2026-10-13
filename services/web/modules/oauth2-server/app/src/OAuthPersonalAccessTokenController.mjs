@@ -105,7 +105,7 @@ const PersonalAccessTokenController = {
         }
 
         // Return token info
-        logger.debug({ tokenInstance }, 'Personal access token valid')
+        logger.debug({ tokenId: tokenInstance._id }, 'Personal access token valid')
 
         return res.json({
             accessToken: tokenInstance.accessToken,

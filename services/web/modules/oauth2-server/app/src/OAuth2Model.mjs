@@ -48,6 +48,11 @@ class OAuth2Model {
       return null
     }
 
+    // Reject tokens of suspended or deleted users
+    if (!token.user_id || token.user_id.suspended) {
+      return null
+    }
+
     return {
       accessToken: token.accessToken,
       accessTokenExpiresAt: token.accessTokenExpiresAt,
