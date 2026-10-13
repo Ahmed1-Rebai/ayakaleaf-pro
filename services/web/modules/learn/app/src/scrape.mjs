@@ -18,6 +18,7 @@ const MAX_CONNECT_TIME = 3000
 const httpAgent = new CustomHttpAgent({ connectTimeout: MAX_CONNECT_TIME })
 const httpsAgent = new CustomHttpsAgent({ connectTimeout: MAX_CONNECT_TIME })
 const agent = url => (url.protocol === 'https:' ? httpsAgent : httpAgent)
+const REQUEST_TIMEOUT_MS = 30 * 1000
 
 async function scrape(baseUrl, page) {
   const uri = new URL(baseUrl + '/learn-scripts/api.php')
@@ -29,7 +30,10 @@ async function scrape(baseUrl, page) {
   }).toString()
 
   try {
-    return await fetchString(uri, { agent })
+    return await fetchString(uri, {
+      agent,
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    })
   } catch (err) {
     if (err instanceof RequestFailedError) {
       console.error(err.response.status, page, err.response)
@@ -86,7 +90,10 @@ async function getAllPagesFrom(baseUrl, continueFrom) {
 
   let blob
   try {
-    blob = await fetchJson(uri, { agent })
+    blob = await fetchJson(uri, {
+      agent,
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    })
   } catch (err) {
     if (err instanceof RequestFailedError) {
       console.error(err.response.status, continueFrom, err.response)

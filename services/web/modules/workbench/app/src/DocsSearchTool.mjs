@@ -14,6 +14,7 @@ const MAX_CONNECT_TIME = 3000
 const httpAgent = new CustomHttpAgent({ connectTimeout: MAX_CONNECT_TIME })
 const httpsAgent = new CustomHttpsAgent({ connectTimeout: MAX_CONNECT_TIME })
 const agent = url => (url.protocol === 'https:' ? httpsAgent : httpAgent)
+const REQUEST_TIMEOUT_MS = 30 * 1000
 
 /**
  * Searches the configured documentation site through its GitBook MCP endpoint.
@@ -48,6 +49,7 @@ function _parseMcpResponse(raw) {
 async function _searchDocumentation(query) {
   const raw = await fetchString(Settings.workbenchDocsSearch.mcpUrl, {
     agent,
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

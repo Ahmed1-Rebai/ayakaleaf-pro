@@ -15,6 +15,7 @@ const AccessTokenEncryptor = createAccessTokenEncryptor('mendeley')
 
 // Mendeley uses OAuth 2.0 (authorization-code flow with refresh tokens).
 const MENDELEY_API_URL = 'https://api.mendeley.com'
+const REQUEST_TIMEOUT_MS = 60 * 1000
 const MENDELEY_OAUTH_AUTHORIZE_URL = 'https://api.mendeley.com/oauth/authorize'
 const MENDELEY_OAUTH_TOKEN_URL = 'https://api.mendeley.com/oauth/token'
 const MENDELEY_SCOPE = 'all'
@@ -91,6 +92,7 @@ async function _requestToken(body) {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: body.toString(),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       })
     )
     if (!data.access_token) {
@@ -188,7 +190,10 @@ async function getGroupsForUser(userId) {
   try {
     const groups = await fetchJson(
       `${MENDELEY_API_URL}/groups?type=all`,
-      withProxy({ headers })
+      withProxy({
+        headers,
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      })
     )
     return (groups || []).map(g => ({
       id: String(g.id),
@@ -229,7 +234,10 @@ async function _fetchBibtex(userId, firstUrl) {
     try {
       const { body: bibtex, response } = await fetchStringWithResponse(
         url,
-        withProxy({ headers })
+        withProxy({
+          headers,
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        })
       )
       if (bibtex.trim()) {
         allBibtex += bibtex + '\n'

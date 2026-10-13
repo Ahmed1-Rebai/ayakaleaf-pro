@@ -14,6 +14,7 @@ const MAX_CONNECT_TIME = 3000
 const httpAgent = new CustomHttpAgent({ connectTimeout: MAX_CONNECT_TIME })
 const httpsAgent = new CustomHttpsAgent({ connectTimeout: MAX_CONNECT_TIME })
 const agent = url => (url.protocol === 'https:' ? httpsAgent : httpAgent)
+const REQUEST_TIMEOUT_MS = 30 * 1000
 
 /**
  * Searches the web through a Tavily-compatible API.
@@ -32,6 +33,7 @@ async function _tavilySearch(query) {
   const cfg = Settings.workbenchWebSearch || {}
   const data = await fetchJson(cfg.url || DEFAULT_TAVILY_URL, {
     agent,
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
