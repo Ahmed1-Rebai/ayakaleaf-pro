@@ -1228,6 +1228,10 @@ module.exports = {
       ),
       Path.resolve(
         __dirname,
+        '../modules/mcp-server/frontend/js/components/mcp-integration-card.tsx'
+      ),
+      Path.resolve(
+        __dirname,
         '../modules/github-sync/frontend/js/components/github-integration-card.tsx'
       ),
       Path.resolve(
@@ -1282,6 +1286,7 @@ module.exports = {
     'oauth2-server',
     'reference-picker',
     'git-bridge',
+    'mcp-server',
     'github-sync',
     'gitlab-sync',
     'tpr-webmodule',
