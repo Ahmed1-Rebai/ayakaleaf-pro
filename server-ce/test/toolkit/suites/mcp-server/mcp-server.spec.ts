@@ -669,6 +669,11 @@ describe('MCP server card in the editor', function () {
       cy.findByRole('tab', { name: 'Integrations' }).click()
       cy.findByText('Connect AI clients to this project.').click()
       cy.findByRole('dialog').within(() => {
+        // translated texts, not their keys
+        cy.findByText('MCP server').should('be.visible')
+        cy.findByText(
+          'Connect an AI client with a Git authentication token.'
+        ).should('be.visible')
         const url = `http://sharelatex/project/${projectId}/mcp`
         cy.contains('code', url)
         cy.contains('code', `claude mcp add --transport http overleaf`)

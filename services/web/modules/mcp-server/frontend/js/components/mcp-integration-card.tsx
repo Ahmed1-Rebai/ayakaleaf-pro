@@ -148,13 +148,11 @@ function McpModal({
       size="lg"
     >
       <OLModalHeader closeButton>
-        <OLModalTitle>MCP server</OLModalTitle>
+        <OLModalTitle>{t('mcp_server')}</OLModalTitle>
       </OLModalHeader>
 
       <OLModalBody>
-        <p>
-          Connect an AI client with a Git authentication token.
-        </p>
+        <p>{t('mcp_server_connect_with_git_token')}</p>
         <CopyableCode content={url} />
 
         <TabContainer defaultActiveKey="claude">
@@ -202,6 +200,7 @@ function McpModal({
 }
 
 function McpIntegrationCard() {
+  const { t } = useTranslation()
   const [showModal, setShowModal] = useState(false)
   const { project } = useProjectContext()
 
@@ -213,8 +212,8 @@ function McpIntegrationCard() {
   return (
     <>
       <IntegrationCard
-        title="MCP server"
-        description="Connect AI clients to this project."
+        title={t('mcp_server')}
+        description={t('mcp_server_description')}
         icon={<McpLogo size={32} />}
         showPaywallBadge={false}
         onClick={() => setShowModal(true)}
