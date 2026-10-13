@@ -5,7 +5,7 @@ import ProjectEntityHandler from '../../../../app/src/Features/Project/ProjectEn
 import ProjectLocator from '../../../../app/src/Features/Project/ProjectLocator.mjs'
 import DocumentUpdaterHandler from '../../../../app/src/Features/DocumentUpdater/DocumentUpdaterHandler.mjs'
 import Errors from '../../../../app/src/Features/Errors/Errors.js'
-import { checkAccess, filePath, text } from './McpUtils.mjs'
+import { checkAccess, filePath, rateLimiters, text } from './McpUtils.mjs'
 
 // Writes are sent like git-bridge pushes, so open editors apply them
 // without the "updated externally" warning
@@ -50,6 +50,7 @@ export async function readDoc(projectId, path) {
 export function buildFileTools({ userId, projectId }) {
   return {
     list_files: {
+      rateLimiter: rateLimiters.listFiles,
       description:
         'List the files of the project: text files (doc) and binary files (file).',
       handler: async () => {
@@ -63,6 +64,7 @@ export function buildFileTools({ userId, projectId }) {
     },
 
     read_file: {
+      rateLimiter: rateLimiters.readFile,
       description:
         'Read the latest content of a text file, including the edits of ' +
         'collaborators.',
@@ -71,6 +73,7 @@ export function buildFileTools({ userId, projectId }) {
     },
 
     edit_file: {
+      rateLimiter: rateLimiters.editFile,
       description:
         'Replace oldString with newString in a text file; the change shows ' +
         'live in Overleaf. oldString must appear exactly once in the latest ' +
@@ -105,6 +108,7 @@ export function buildFileTools({ userId, projectId }) {
     },
 
     write_file: {
+      rateLimiter: rateLimiters.writeFile,
       description:
         'Create a text file, or replace all its content; folders are ' +
         'created as needed. Prefer edit_file to change part of a file.',
@@ -134,6 +138,7 @@ export function buildFileTools({ userId, projectId }) {
     },
 
     delete_file: {
+      rateLimiter: rateLimiters.deleteFile,
       description: 'Delete a file or folder of the project.',
       inputSchema: { path: filePath },
       handler: async ({ path }) => {

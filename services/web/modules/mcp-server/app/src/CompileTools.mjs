@@ -2,20 +2,12 @@ import { setTimeout } from 'timers/promises'
 import Settings from '@overleaf/settings'
 import { zz } from '../../../../app/src/infrastructure/Validation.mjs'
 import JsonWebToken from '../../../../app/src/infrastructure/JsonWebToken.mjs'
-import { RateLimiter } from '../../../../app/src/infrastructure/RateLimiter.mjs'
 import CompileManager from '../../../../app/src/Features/Compile/CompileManager.mjs'
 import ClsiManager from '../../../../app/src/Features/Compile/ClsiManager.mjs'
-import { text } from './McpUtils.mjs'
+import { rateLimiters, text } from './McpUtils.mjs'
 
 export const DOWNLOAD_AUDIENCE = 'mcp-download'
 const DOWNLOAD_LINK_TTL = '5m'
-
-// The limit of POST /project/:id/compile, by name and key: the editor and
-// MCP compiles of a user count together
-const compileRateLimiter = new RateLimiter('compile-project-http', {
-  points: 200,
-  duration: 10 * 60,
-})
 
 const buildId = zz.buildId().describe('buildId returned by compile.')
 const clsiServerId = zz
@@ -31,18 +23,13 @@ export function compileUserId(userId) {
 export function buildCompileTools({ userId, projectId }) {
   return {
     compile: {
+      rateLimiter: rateLimiters.compileProjectHttp,
       description:
         'Compile the project as it is on Overleaf, with the edits of ' +
         'edit_file and write_file; push first only the git commits you made. ' +
         'Returns the status, the buildId and clsiServerId for ' +
         'get_compile_log and get_output_file_link, and the output files.',
       handler: async () => {
-        await compileRateLimiter
-          .consume(`${projectId}:${userId}`, 1, { method: 'userId' })
-          .catch(err => {
-            if (err instanceof Error) throw err
-            throw new Error('Too many compiles, try again in a few minutes')
-          })
         let result = await CompileManager.promises.compile(projectId, userId, {})
         // the open editor of the same user may have just compiled these edits
         if (result.status === 'too-recently-compiled') {
@@ -60,6 +47,7 @@ export function buildCompileTools({ userId, projectId }) {
     },
 
     get_compile_log: {
+      rateLimiter: rateLimiters.miscOutputDownload,
       description: 'Read the LaTeX log (output.log) of a compile.',
       inputSchema: { buildId, clsiServerId },
       handler: async ({ buildId, clsiServerId }) => {
@@ -77,6 +65,7 @@ export function buildCompileTools({ userId, projectId }) {
     },
 
     get_output_file_link: {
+      rateLimiter: rateLimiters.getOutputFileLink,
       description:
         'Get a download link for an output file of a compile, output.pdf by ' +
         'default. The link expires after 5 minutes, e.g. download it with ' +
@@ -102,6 +91,7 @@ export function buildCompileTools({ userId, projectId }) {
     },
 
     word_count: {
+      rateLimiter: rateLimiters.wordCount,
       description:
         'Count the words of the main document, or of another .tex file, ' +
         'with texcount. Compile first.',

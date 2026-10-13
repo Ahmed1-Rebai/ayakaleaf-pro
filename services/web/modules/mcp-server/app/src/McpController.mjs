@@ -16,6 +16,7 @@ import {
 import { buildCommentTools } from './CommentTools.mjs'
 import { buildFileTools } from './FileTools.mjs'
 import { buildProjectTools } from './ProjectTools.mjs'
+import { rateLimit } from './McpUtils.mjs'
 
 // The router checked that the user can read the project
 function createServer(userId, projectId) {
@@ -48,8 +49,9 @@ function createServer(userId, projectId) {
     ...buildFileTools(context),
     ...buildCommentTools(context),
   }
-  for (const [name, { handler, ...config }] of Object.entries(tools)) {
-    server.registerTool(name, config, handler)
+  const key = `${projectId}:${userId}`
+  for (const [name, { rateLimiter, handler, ...config }] of Object.entries(tools)) {
+    server.registerTool(name, config, rateLimit(rateLimiter, key, handler))
   }
 
   return server

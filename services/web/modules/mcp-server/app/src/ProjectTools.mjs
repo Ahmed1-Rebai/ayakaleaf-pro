@@ -5,12 +5,13 @@ import AuthorizationManager from '../../../../app/src/Features/Authorization/Aut
 import EditorController from '../../../../app/src/Features/Editor/EditorController.mjs'
 import ProjectGetter from '../../../../app/src/Features/Project/ProjectGetter.mjs'
 import ProjectEntityHandler from '../../../../app/src/Features/Project/ProjectEntityHandler.mjs'
-import { checkAccess, filePath, text } from './McpUtils.mjs'
+import { checkAccess, filePath, rateLimiters, text } from './McpUtils.mjs'
 import { readDoc } from './FileTools.mjs'
 
 export function buildProjectTools({ userId, projectId }) {
   return {
     get_clone_info: {
+      rateLimiter: rateLimiters.getCloneInfo,
       description:
         'How to clone this project with git, to read it all at once and ' +
         'search it, or to change it locally as the server instructions ' +
@@ -27,6 +28,7 @@ export function buildProjectTools({ userId, projectId }) {
     },
 
     get_settings: {
+      rateLimiter: rateLimiters.getSettings,
       description:
         'Read the project settings: compiler, TeX Live image, main ' +
         'document, main bibliography and spell check language, and the ' +
@@ -59,6 +61,7 @@ export function buildProjectTools({ userId, projectId }) {
     },
 
     list_versions: {
+      rateLimiter: rateLimiters.listVersions,
       description:
         'List the versions saved in the project history, with their comment.',
       handler: async () => {
@@ -76,6 +79,7 @@ export function buildProjectTools({ userId, projectId }) {
     },
 
     update_settings: {
+      rateLimiter: rateLimiters.updateSettings,
       description:
         'Change the compiler, the TeX Live image (one of ' +
         'availableTexLiveImages of get_settings) or the main document.',

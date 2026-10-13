@@ -8,7 +8,7 @@ import EditorRealTimeController from '../../../../app/src/Features/Editor/Editor
 import ProjectEntityHandler from '../../../../app/src/Features/Project/ProjectEntityHandler.mjs'
 import UserInfoController from '../../../../app/src/Features/User/UserInfoController.mjs'
 import UserInfoManager from '../../../../app/src/Features/User/UserInfoManager.mjs'
-import { checkAccess, text } from './McpUtils.mjs'
+import { checkAccess, rateLimiters, text } from './McpUtils.mjs'
 
 // Comments are threads in chat, anchored to text by the ranges of a doc, as
 // the review panel reads and changes them (modules/track-changes)
@@ -58,6 +58,7 @@ export function buildCommentTools({ userId, projectId }) {
 
   return {
     list_comments: {
+      rateLimiter: rateLimiters.listComments,
       description:
         'List the comments of the project: the file and the commented ' +
         'text, then each message with its author, who resolved it, if so.',
@@ -113,6 +114,7 @@ export function buildCommentTools({ userId, projectId }) {
     },
 
     reply_to_comment: {
+      rateLimiter: rateLimiters.replyToComment,
       description:
         'Reply to a comment; the reply shows live in Overleaf, under the ' +
         "user's name.",
@@ -147,6 +149,7 @@ export function buildCommentTools({ userId, projectId }) {
     },
 
     resolve_comment: {
+      rateLimiter: rateLimiters.resolveComment,
       description: 'Resolve a comment, once it is dealt with.',
       inputSchema: { threadId },
       handler: async ({ threadId }) => {
@@ -171,6 +174,7 @@ export function buildCommentTools({ userId, projectId }) {
     },
 
     reopen_comment: {
+      rateLimiter: rateLimiters.reopenComment,
       description: 'Reopen a resolved comment.',
       inputSchema: { threadId },
       handler: async ({ threadId }) => {

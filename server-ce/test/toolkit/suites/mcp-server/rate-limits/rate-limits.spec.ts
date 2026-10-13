@@ -6,7 +6,8 @@ import { postWithCsrf } from '../../../../helpers/request'
 import { ensureUserExists } from '../../../../helpers/users'
 
 // With rate limits on, MCP compiles share the limit of the compile button:
-// 200 per project and user every 10 minutes.
+// 200 per project and user every 10 minutes. Every other tool has its own
+// limit, e.g. 30 setting changes per minute.
 
 const owner = `owner-${uuid()}@example.com`
 
@@ -54,24 +55,40 @@ describe('MCP compiles and the compile rate limit', function () {
       .its('status')
       .should('equal', 429)
 
-    cy.request({
-      method: 'POST',
-      url: `/project/${projectId}/mcp`,
-      headers: {
-        Accept: 'application/json, text/event-stream',
-        Authorization: `Bearer ${token}`,
-      },
-      body: {
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'tools/call',
-        params: { name: 'compile', arguments: {} },
-      },
+    callTool('compile').should(result => {
+      expect(result.isError).to.equal(true)
+      expect(result.content[0].text).to.contain('Rate limit reached')
     })
-      .its('body.result')
-      .should(result => {
-        expect(result.isError).to.equal(true)
-        expect(result.content[0].text).to.contain('Too many compiles')
-      })
   })
+
+  it('refuses setting changes past 30 per minute', function () {
+    for (let i = 0; i < 30; i++) {
+      callTool('update_settings', { compiler: 'pdflatex' }).should(result => {
+        expect(result.isError).to.not.equal(true)
+      })
+    }
+    callTool('update_settings', { compiler: 'pdflatex' }).should(result => {
+      expect(result.isError).to.equal(true)
+      expect(result.content[0].text).to.contain('Rate limit reached')
+    })
+  })
+
+  function callTool(name: string, args: Record<string, unknown> = {}) {
+    return cy
+      .request({
+        method: 'POST',
+        url: `/project/${projectId}/mcp`,
+        headers: {
+          Accept: 'application/json, text/event-stream',
+          Authorization: `Bearer ${token}`,
+        },
+        body: {
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'tools/call',
+          params: { name, arguments: args },
+        },
+      })
+      .its('body.result')
+  }
 })
