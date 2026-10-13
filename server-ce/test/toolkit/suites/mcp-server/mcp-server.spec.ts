@@ -1,6 +1,7 @@
 import { v4 as uuid } from 'uuid'
 import {
   createGitToken,
+  git,
   gitClone,
   gitCommitAndPush,
   workingCopy,
@@ -12,6 +13,11 @@ import {
   projectName,
 } from '../../../helpers/project'
 import { requestWithCsrf } from '../../../helpers/request'
+import {
+  addComment,
+  commentEntry,
+  openReviewPanel,
+} from '../../../helpers/review'
 import { shareProject, shareProjectByLink } from '../../../helpers/sharing'
 import { ensureUserExists } from '../../../helpers/users'
 
@@ -21,6 +27,8 @@ import { ensureUserExists } from '../../../helpers/users'
 const owner = `owner-${uuid()}@example.com`
 const viewer = `viewer-${uuid()}@example.com`
 const stranger = `stranger-${uuid()}@example.com`
+const reviewer = `reviewer-${uuid()}@example.com`
+const linkViewer = `link-viewer-${uuid()}@example.com`
 
 const MAIN_TEX = [
   '\\documentclass{article}',
@@ -36,7 +44,7 @@ type ToolResult = {
 }
 
 before(function () {
-  for (const email of [owner, viewer, stranger]) {
+  for (const email of [owner, viewer, stranger, reviewer, linkViewer]) {
     ensureUserExists(email)
   }
 })
@@ -155,6 +163,9 @@ describe('MCP server of a project', function () {
         // where to clone and where to download, so outputs stay out of git
         expect(result.instructions).to.contain(`./${projectId}/`)
         expect(result.instructions).to.contain('./output.pdf')
+        // live edits for text, git for local work and binary files
+        expect(result.instructions).to.contain('git pull')
+        expect(result.instructions).to.contain('push once')
       })
     mcp(projectId, ownerToken, 'tools/list')
       .its('body.result.tools')
@@ -167,9 +178,13 @@ describe('MCP server of a project', function () {
         'get_compile_log',
         'get_output_file_link',
         'get_settings',
+        'list_comments',
         'list_files',
         'list_versions',
         'read_file',
+        'reopen_comment',
+        'reply_to_comment',
+        'resolve_comment',
         'update_settings',
         'word_count',
         'write_file',
@@ -242,6 +257,15 @@ describe('MCP server of a project', function () {
         expect(result.content[0].text).to.contain('Output written on output.pdf')
       })
     })
+  })
+
+  it('compiles again right after a compile', function () {
+    compile(projectId, ownerToken)
+    // within the second the editor waits between compiles, MCP waits for it
+    callTool(projectId, ownerToken, 'compile')
+      .then(toolJson)
+      .its('status')
+      .should('equal', 'success')
   })
 
   it('counts the words of what was pushed', function () {
@@ -388,6 +412,9 @@ describe('Editing a project through MCP', function () {
       path: 'sections/intro.tex',
       oldString: 'Second line',
       newString: 'Edited through MCP',
+    }).then(result => {
+      // the clone catches up with one pull after the edits
+      expect(result.content[0].text).to.contain(`git pull in ./${projectId}/`)
     })
     readFile('sections/intro.tex').should(
       'equal',
@@ -399,6 +426,29 @@ describe('Editing a project through MCP', function () {
       .then(toolJson)
       .then((files: { path: string }[]) => files.map(file => file.path))
       .should('not.include', 'sections/intro.tex')
+  })
+
+  it('brings the edits into a clone with one pull', function () {
+    const dir = workingCopy('mcp-pull')
+    callTool(projectId, token, 'write_file', {
+      path: 'pulled.tex',
+      content: 'Before',
+    })
+    gitClone(projectId, token, dir).its('exitCode').should('equal', 0)
+    callTool(projectId, token, 'edit_file', {
+      path: 'pulled.tex',
+      oldString: 'Before',
+      newString: 'After',
+    })
+    callTool(projectId, token, 'write_file', {
+      path: 'new.tex',
+      content: 'New',
+    })
+    git(
+      `cd ${dir} && git pull -q && printf '%s|%s' "$(cat pulled.tex)" "$(cat new.tex)"`
+    )
+      .its('stdout')
+      .should('equal', 'After|New')
   })
 
   it('refuses an edit whose text is missing or not unique', function () {
@@ -485,6 +535,129 @@ describe('Editing a project through MCP', function () {
       .then(toolJson)
       .its('mainDocument')
       .should('equal', 'other.tex')
+  })
+})
+
+type Comment = {
+  threadId: string
+  file: string | null
+  text: string
+  resolved: boolean
+  resolvedBy?: string | null
+  messages: { author: string | null; content: string }[]
+}
+
+describe('Comments through MCP', function () {
+  let projectId: string
+  let ownerToken: string
+  let reviewerToken: string
+  let linkViewerToken: string
+
+  before(function () {
+    login(owner)
+    createProject(projectName('Mcp comments')).then(id => {
+      projectId = id
+      shareProject(projectId, reviewer, 'review')
+      login(owner)
+      shareProjectByLink(projectId, linkViewer, 'readOnly')
+      login(owner)
+      openProject(projectId)
+      addComment(projectId, 'Introduction', 'Owner question')
+    })
+    createGitToken().then(token => {
+      ownerToken = token
+    })
+    login(reviewer)
+    createGitToken().then(token => {
+      reviewerToken = token
+    })
+    login(linkViewer)
+    createGitToken().then(token => {
+      linkViewerToken = token
+    })
+  })
+
+  function listComments(
+    token: string,
+    includeResolved = false
+  ): Cypress.Chainable<Comment[]> {
+    return callTool(projectId, token, 'list_comments', { includeResolved }).then(
+      toolJson
+    )
+  }
+
+  function ownerQuestion(comments: Comment[]) {
+    return comments.find(
+      comment => comment.messages[0].content === 'Owner question'
+    )
+  }
+
+  it('lists the comments with the commented text and their authors', function () {
+    listComments(ownerToken).then(comments => {
+      const comment = ownerQuestion(comments)!
+      expect(comment.file).to.equal('main.tex')
+      expect(comment.text).to.contain('Introduction')
+      expect(comment.resolved).to.equal(false)
+      expect(comment.messages[0].author).to.contain(owner)
+    })
+  })
+
+  it('replies, resolves and reopens live in the open editor', function () {
+    login(owner)
+    openProject(projectId)
+    openReviewPanel()
+    commentEntry('Owner question').should('be.visible')
+
+    listComments(ownerToken).then(comments => {
+      const { threadId } = ownerQuestion(comments)!
+
+      // under the name of the token's user
+      callTool(projectId, reviewerToken, 'reply_to_comment', {
+        threadId,
+        content: 'Reply through MCP',
+      }).then(result => expect(result.isError).not.to.equal(true))
+      commentEntry('Reply through MCP').should('be.visible')
+
+      // a reviewer resolves only the threads they started
+      callTool(projectId, reviewerToken, 'resolve_comment', { threadId }).then(
+        result => {
+          expect(result.isError).to.equal(true)
+          expect(result.content[0].text).to.contain('cannot resolve')
+        }
+      )
+
+      callTool(projectId, ownerToken, 'resolve_comment', { threadId })
+      commentEntry('Owner question').should('not.exist')
+      listComments(ownerToken).then(open => {
+        expect(ownerQuestion(open)).to.equal(undefined)
+      })
+      listComments(ownerToken, true).then(all => {
+        const comment = ownerQuestion(all)!
+        expect(comment.resolved).to.equal(true)
+        expect(comment.resolvedBy).to.contain(owner)
+        expect(comment.messages[1].author).to.contain(reviewer)
+      })
+
+      callTool(projectId, ownerToken, 'reopen_comment', { threadId })
+      commentEntry('Owner question').should('be.visible')
+    })
+  })
+
+  it('keeps the comments from viewers who joined by link', function () {
+    callTool(projectId, linkViewerToken, 'list_comments').then(result => {
+      expect(result.isError).to.equal(true)
+      expect(result.content[0].text).to.contain('cannot see the comments')
+    })
+  })
+
+  it('refuses a comment that does not exist', function () {
+    callTool(projectId, ownerToken, 'reply_to_comment', {
+      threadId: '0'.repeat(24),
+      content: 'Nobody reads this',
+    }).then(result => {
+      expect(result.isError).to.equal(true)
+      expect(result.content[0].text).to.contain('list_comments again')
+    })
   })
 })
 
