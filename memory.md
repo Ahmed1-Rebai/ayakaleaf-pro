@@ -1,14 +1,19 @@
 # Project memory (for future agent sessions)
 
 ## Context
-- Goal: self-hosted Ayakaleaf Pro (Overleaf CE + Pro features, AGPL-3.0) wired to the lab's
-  OpenAI-compatible LLM gateway `https://lambda-way.deslabcloud.com/v1`, model
-  `Qwen/Qwen3.5-122B-A10B-GPTQ-Int4`.
-- Upstream: `ayaka-notes/ayakaleaf-pro`, default branch `server-pro`, forked at `5d3575b`.
-- Fork: `Ahmed1-Rebai/ayakaleaf-pro`; working branch `lab/llm-gateway-deploy`.
-  Local clone `~/ayakaleaf-pro`: `origin` = fork, `upstream` = ayaka-notes (push disabled).
-  Git auth: a repo-local credential helper reads `~/.config/ayakaleaf/gh-token` (chmod 600).
-- No application code changes. Only docs, `.env.example`, `deploy/` templates and tests.
+- Goal: self-hosted Ayakaleaf Pro (Overleaf CE + Pro features, AGPL-3.0), branded LambdaTeX,
+  wired to the lab's OpenAI-compatible LLM gateway `https://lambda-way.deslabcloud.com/v1`,
+  model `Qwen/Qwen3.5-122B-A10B-GPTQ-Int4`.
+- **Repository of record**: GitLab `gitkube.deslabcloud.com/ahmed_rebaii/lambdatex` (project 83),
+  cloned at `~/lambdatex`. Deployment-only (no application source; the app runs from the
+  published image). Remote `gitlab` over HTTPS; a repo-local credential helper reads
+  `~/.config/ayakaleaf/gitkube-token`. SSH (deploy key #11, `~/.ssh/id_ed25519_gitkube`) is
+  set up, but gitkube's port 22 is not reachable from this VM.
+- Commits: author Ahmed1-Rebai only, never a Co-Authored-By trailer (user preference).
+- Upstream source: `ayaka-notes/ayakaleaf-pro` (`server-pro`, image built from `7e6ffc2`).
+  The older full fork (`~/ayakaleaf-pro`, GitHub `Ahmed1-Rebai/ayakaleaf-pro`, branch
+  `lab/llm-gateway-deploy`) is where this history started; this repo replays only its
+  deployment commits.
 
 ## Deployment layout (host)
 - Toolkit: `~/ayakaleaf-toolkit` (`ayaka-notes/toolkit`), `SERVER_PRO=true`, image
@@ -18,10 +23,9 @@
 - Admin account comes from `.env` (`SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD`) and is applied with
   `deploy/scripts/seed-admin.sh` (idempotent; `--replace old@x` renames an account, keeping its projects).
 - Data: `~/ayakaleaf-toolkit/data/{overleaf,mongo,redis}`.
-- AI config + secret: **only** `~/ayakaleaf-pro/.env` (git-ignored, chmod 600), loaded by
+- AI, admin and mail settings and all secrets: **only** `~/lambdatex/.env` (git-ignored, chmod 600), loaded by
   `~/ayakaleaf-toolkit/config/docker-compose.override.yml`. The user explicitly wants a single
   `.env`. Do not create `ai.env` or other copies of the key.
-- The repo's root `docker-compose.yml` is stock Overleaf CE. Don't use it.
 
 ## Branding
 - Theme "LambdaTeX" (LAMBDA Lab): `deploy/branding/` (env, CSS, assets, nginx sub_filter
@@ -42,8 +46,7 @@
 ## Gotchas
 - `bin/up` pulls the TeX Live image before starting. Use `SIBLING_CONTAINERS_PULL=false bin/up -d`
   once it is present.
-- Upstream `.gitignore` ignores `docker-compose.override.yml`, so the template is
-  `deploy/toolkit-override.example.yml`.
+- The override template is `deploy/toolkit-override.example.yml`; its paths assume `/home/user/lambdatex`.
 - The published 6.3.0 image is built from `7e6ffc2` and lacks the `mcp-server` module.
 - Never `cat`/print `.env`. Check the key with `awk` length or `${#AI_API_KEY}` only.
 

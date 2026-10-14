@@ -25,7 +25,7 @@ container by `<toolkit>/config/docker-compose.override.yml` (template:
 Template: [`.env.example`](../.env.example). After changing it, run
 `bin/docker-compose up -d sharelatex` in the toolkit.
 
-Code: `services/web/modules/workbench/index.mjs` (settings),
+Upstream code ([ayaka-notes/ayakaleaf-pro](https://github.com/ayaka-notes/ayakaleaf-pro)): `services/web/modules/workbench/index.mjs` (settings),
 `…/workbench/app/src/WorkbenchAiClient.mjs` (provider),
 `…/error-assistant/app/src/ErrorAssistantController.mjs`.
 

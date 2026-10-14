@@ -4,7 +4,7 @@ suggest-fix on a real compile error, and workbench chat (LaTeX generation).
 Prints the raw stream events so failures are visible."""
 import json, os, sys, time
 sys.argv = [sys.argv[0], "noop"]
-ns = {}; exec(open(os.path.expanduser("~/ayakaleaf-pro/deploy/tests/e2e_platform.py")).read().split('{"run"')[0], ns)
+ns = {}; exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "e2e_platform.py")).read().split('{"run"')[0], ns)
 BASE, login, compile_pdf, zip_of = ns["BASE"], ns["login"], ns["compile_pdf"], ns["zip_of"]
 BROKEN = "\\documentclass{article}\n\\begin{document}\nHello.\n\n\\begin{itemiz}\n\\item one\n\\end{itemiz}\n\\end{document}\n"
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Direct OpenAI-compatible gateway checks. Reads AI_* from ~/ayakaleaf-pro/.env; never prints the key."""
+"""Direct OpenAI-compatible gateway checks. Reads AI_* from the repository .env; never prints the key."""
 import json, os, re, sys, time
 import requests
 
@@ -10,7 +10,7 @@ def envfile(p):
         m = re.match(r'^([A-Z_]+)=(.*)$', line.strip())
         if m: d[m.group(1)] = m.group(2).strip().strip('"')
     return d
-env = envfile(os.path.expanduser("~/ayakaleaf-pro/.env"))
+env = envfile(os.path.join(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."), ".env"))
 BASE, MODEL, KEY = env["AI_BASE_URL"].rstrip("/"), env["AI_MODEL"], env.get("AI_API_KEY", "")
 if not KEY: sys.exit("AI_API_KEY is empty in config/ai.env")
 H = {"Authorization": f"Bearer {KEY}", "Content-Type": "application/json"}
