@@ -1,6 +1,15 @@
 import TemplatesManager from './TemplatesManager.mjs'
 import SessionManager from '../../../../app/src/Features/Authentication/SessionManager.mjs' 
 import path from 'node:path'
+import { parseReq, z, zz } from '../../../../app/src/infrastructure/Validation.mjs'
+
+// both values are joined into the filestore URL
+const createProjectFromTemplateSchema = z.object({
+  body: z.object({
+    templateId: zz.objectId(),
+    templateVersionId: z.string().regex(/^[0-9]+$/),
+  }),
+})
 
 // Return a page to create a project from a template
 async function getProjectFromTemplate(req, res, next) {
@@ -33,6 +42,7 @@ async function createProjectFromTemplate(req, res, next) {
   // an unhandled rejection exits the web process
   let project
   try {
+    parseReq(req, createProjectFromTemplateSchema)
     project = await TemplatesManager.promises.createProjectFromV1Template(
       req.body.brandVariationId,
       req.body.compiler,

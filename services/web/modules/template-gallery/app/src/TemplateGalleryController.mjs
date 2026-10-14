@@ -7,6 +7,13 @@ import TemplateGalleryManager from'./TemplateGalleryManager.mjs'
 import { getUserName } from './TemplateGalleryHelper.mjs'
 import { TemplateNameConflictError, RecompileRequiredError } from './TemplateErrors.mjs'
 import Settings from '@overleaf/settings'
+import { InvalidParamsError, InvalidRequestError, parseReq, z, zz } from '../../../../app/src/infrastructure/Validation.mjs'
+
+// both values are joined into the filestore URL
+const templateFileSchema = z.object({
+  params: z.object({ template_id: zz.objectId() }),
+  query: z.object({ version: z.string().regex(/^[0-9]+$/) }),
+})
 
 async function createTemplateFromProject(req, res, next) {
   const t = req.i18n.translate
@@ -100,15 +107,18 @@ async function deleteTemplate(req, res, next) {
 
 async function getTemplatePreview(req, res, next) {
   try {
-    const templateId = req.params.template_id
-    const { version, style } = req.query
+    const {
+      params: { template_id: templateId },
+      query: { version },
+    } = parseReq(req, templateFileSchema)
+    const { style } = req.query
 
     const { stream, contentType } = await TemplateGalleryManager.fetchTemplatePreview({ templateId, version, style })
 
     res.setHeader('Content-Type', contentType)
     stream.pipe(res)
   } catch (error) {
-    if (error.info?.status == 404) {
+    if (error.info?.status == 404 || error instanceof InvalidParamsError || error instanceof InvalidRequestError) {
       return ErrorController.notFound(req, res, next)
     }
     return res.status(error.info?.status || 400).json(error.info)
@@ -117,8 +127,10 @@ async function getTemplatePreview(req, res, next) {
 
 async function downloadTemplateZip(req, res, next) {
   try {
-    const templateId = req.params.template_id
-    const { version } = req.query
+    const {
+      params: { template_id: templateId },
+      query: { version },
+    } = parseReq(req, templateFileSchema)
 
     const { stream, contentType, filename } = await TemplateGalleryManager.fetchTemplateZip({ templateId, version })
     
@@ -126,7 +138,7 @@ async function downloadTemplateZip(req, res, next) {
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
     stream.pipe(res)
   } catch (error) {
-    if (error.info?.status == 404) {
+    if (error.info?.status == 404 || error instanceof InvalidParamsError || error instanceof InvalidRequestError) {
       return ErrorController.notFound(req, res, next)
     }
     return res.status(error.info?.status || 400).json(error.info)

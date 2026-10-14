@@ -1,6 +1,7 @@
 import OAuthPersonalAccessTokenManager from './OAuthPersonalAccessTokenManager.mjs'
 import SessionManager from '../../../../app/src/Features/Authentication/SessionManager.mjs'
 import logger from '@overleaf/logger'
+import { expressify } from '@overleaf/promise-utils'
 
 const MAX_PAT_COUNT = 10
 
@@ -117,4 +118,9 @@ const PersonalAccessTokenController = {
 
 }
 
-export default PersonalAccessTokenController
+export default {
+    getUserPersonalAccessTokens: expressify(PersonalAccessTokenController.getUserPersonalAccessTokens),
+    createPersonalAccessToken: expressify(PersonalAccessTokenController.createPersonalAccessToken),
+    deletePersonalAccessToken: expressify(PersonalAccessTokenController.deletePersonalAccessToken),
+    checkPersonalAccessToken: expressify(PersonalAccessTokenController.checkPersonalAccessToken),
+}

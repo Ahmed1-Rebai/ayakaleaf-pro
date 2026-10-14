@@ -65,6 +65,15 @@ export function buildProjectTools({ userId, projectId }) {
       description:
         'List the versions saved in the project history, with their comment.',
       handler: async () => {
+        // as the history panel, closed to the viewers who joined by link
+        if (
+          await AuthorizationManager.promises.isRestrictedUserForProject(
+            userId,
+            projectId
+          )
+        ) {
+          throw new Error('You cannot see the history of this project')
+        }
         const labels = await fetchJson(
           `${Settings.apis.project_history.url}/project/${projectId}/labels`
         )

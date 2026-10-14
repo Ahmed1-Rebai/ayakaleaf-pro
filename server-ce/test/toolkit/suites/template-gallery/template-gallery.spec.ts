@@ -729,6 +729,47 @@ describe('template robustness', function () {
       .should('be.gte', 400)
   })
 
+  // The id and the version are joined into the filestore URL, so anything
+  // but an ObjectId and a number could reach another filestore key.
+  it('fetches template files only for an ObjectId and a numeric version', function () {
+    login(user)
+    requestTemplateRoute(`/template/${templateId}/zip?version=1`)
+      .its('status')
+      .should('equal', 200)
+    for (const route of ['zip', 'preview']) {
+      for (const version of ['99/../1', '1#', '1?style=x', '-1', '1.0', ' 1', 'abc']) {
+        requestTemplateRoute(
+          `/template/${templateId}/${route}?version=${encodeURIComponent(version)}`
+        )
+          .its('status')
+          .should('equal', 404)
+      }
+      requestTemplateRoute(
+        `/template/${encodeURIComponent(`x/../${templateId}`)}/${route}?version=1`
+      )
+        .its('status')
+        .should('equal', 404)
+    }
+
+    cy.visit('/project')
+    for (const [badTemplateId, badVersion] of [
+      [templateId, '99/../1'],
+      [templateId, 'abc'],
+      [`x/../${templateId}`, '1'],
+    ]) {
+      postWithCsrf('/project/new/template/post_back', {
+        templateId: badTemplateId,
+        templateVersionId: badVersion,
+        templateName: 'traversal',
+        compiler: 'pdflatex',
+        mainFile: 'main.tex',
+        language: 'en',
+      })
+        .its('status')
+        .should('equal', 400)
+    }
+  })
+
   it('looks templates up by id or name only', function () {
     login(user)
     let started = 0

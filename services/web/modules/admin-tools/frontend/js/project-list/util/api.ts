@@ -6,7 +6,6 @@ import { deleteJSON, postJSON } from '@/infrastructure/fetch-json'
 
 export type TransferOwnershipOptions = {
   user_id: string
-  skipEmails: boolean
 }
 
 export function getProjects( 

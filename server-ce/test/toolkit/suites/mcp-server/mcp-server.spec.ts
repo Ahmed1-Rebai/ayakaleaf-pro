@@ -651,6 +651,13 @@ describe('Comments through MCP', function () {
     })
   })
 
+  it('keeps the history from viewers who joined by link', function () {
+    callTool(projectId, linkViewerToken, 'list_versions').then(result => {
+      expect(result.isError).to.equal(true)
+      expect(result.content[0].text).to.contain('cannot see the history')
+    })
+  })
+
   it('refuses a comment that does not exist', function () {
     callTool(projectId, ownerToken, 'reply_to_comment', {
       threadId: '0'.repeat(24),
