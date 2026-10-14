@@ -109,12 +109,29 @@ bin/doctor                   # environment diagnostics
 
 The UI is served on the internal network at **http://10.110.188.149:8001/** (`OVERLEAF_PORT=8001`, `OVERLEAF_LISTEN_IP=0.0.0.0` in `config/overleaf.rc`; `OVERLEAF_SITE_URL=http://10.110.188.149:8001` in `config/variables.env`). Plain HTTP: for anything beyond internal testing, use TLS.
 From another machine use an SSH tunnel (`ssh -L 8001:127.0.0.1:8001 <host>`), or put a TLS
-proxy in front (`bin/init --tls`) rather than exposing port 80. Create the first admin at
-`/launchpad`; manage users at `/admin`.
+proxy in front (`bin/init --tls`) rather than exposing the port. Manage users at `/admin`.
 
 After editing `.env` or `config/*`, apply with `bin/docker-compose up -d sharelatex`.
 
 Data lives in `~/ayakaleaf-toolkit/data/{overleaf,mongo,redis}`. Back up all three.
+
+### Admin account and mail
+
+The admin account is defined in `.env`, not created by hand:
+
+```bash
+# set SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD in .env, then:
+deploy/scripts/seed-admin.sh                          # create, or update the password; idempotent
+deploy/scripts/seed-admin.sh --replace old@example.org   # rename an existing account (keeps its projects)
+```
+
+The script reads `.env` on the host and passes the values to the container over stdin, so
+they never appear in process arguments. Passwords go through Overleaf's normal policy checks.
+
+Mail uses the `EMAIL__*` block in `.env`, which is mapped onto Overleaf's
+`OVERLEAF_EMAIL_*` variables in the same file (see `.env.example`). Apply changes with
+`bin/docker-compose up -d sharelatex`. A reachable SMTP relay is required: with mail
+enabled and no relay, flows that send mail (for example "Forgot your password?") fail.
 
 ### Usage
 
@@ -134,6 +151,8 @@ the user must approve.
 | `403 ai_access_denied` | An admin disabled AI for that user (`aiFeatures.enabled=false`). |
 | Compile fails with Docker errors | Docker socket must be mounted (`SIBLING_CONTAINERS_ENABLED=true`) and the TeX Live image present locally. |
 | Page not reachable from other machines (`ERR_CONNECTION_REFUSED`) | Check `docker port sharelatex`: `127.0.0.1:8001` means it is bound to loopback only. Set `OVERLEAF_LISTEN_IP=0.0.0.0`, then `bin/docker-compose up -d sharelatex`. A timeout instead of a refusal points to a network firewall. |
+| "Forgot your password?" → *Something went wrong* (500) | The SMTP relay is unreachable: `bin/logs web \| grep ECONNREFUSED`. Point `EMAIL__HOST`/`EMAIL__PORT` at a reachable relay, or comment out `OVERLEAF_EMAIL_FROM_ADDRESS` to turn mail off. |
+| `seed-admin.sh` fails with `contains_email` / `too_similar` | Overleaf rejects passwords that contain or resemble the email address; choose another. |
 | Port already in use | Change `OVERLEAF_PORT` in `config/overleaf.rc` (this deployment uses 8001), then `bin/docker-compose up -d sharelatex`. |
 
 ## Upgrading

@@ -10,7 +10,8 @@ unchanged. Everything is configuration plus files mounted read-only.
 | Piece | File | Mechanism |
 |---|---|---|
 | Name, nav title, header logos, footers | `deploy/branding/branding.env` | Upstream env vars (`OVERLEAF_APP_NAME`, `OVERLEAF_NAV_TITLE`, `OVERLEAF_HEADER_IMAGE_URL[_LIGHT/_DARK]`, `OVERLEAF_LEFT/RIGHT_FOOTER`) |
-| Theme | `deploy/branding/lambdatex/lambdatex.css` | nginx `sub_filter` adds one `<link>` before `</head>` on every HTML page (`deploy/branding/nginx/`, mounted at `/etc/nginx/conf.d/`) |
+| Theme | `deploy/branding/lambdatex/lambdatex.css` | nginx `sub_filter` adds a `<link>` before `</head>` on every HTML page (`deploy/branding/nginx/`, mounted at `/etc/nginx/conf.d/`) |
+| Password show/hide | `deploy/branding/lambdatex/lambdatex.js` | Same injection, as `<script defer nonce=…>`. nginx copies the per-request nonce from the app's CSP header, so the policy (`'strict-dynamic'` + nonce) stays unchanged |
 | Assets (marks, Inter, icons) | `deploy/branding/lambdatex/` | Mounted at `/overleaf/services/web/public/img/lambdatex/` and served as `/img/lambdatex/…` |
 | Favicons, compile-status icons, web manifest | same folder | Mounted over the upstream files in `public/` |
 | Overleaf "O" logo (password reset, error pages) | `lambda-logo.svg` | Mounted over `public/img/ol-brand/overleaf-o.svg` and `overleaf-o-dark.svg` |
@@ -28,6 +29,12 @@ The theme works by:
 * styling the sign-in, registration and reset pages: glass card, 3D mark, glow and dot grid.
   The dashboard gets the lab mark instead of "Digital Science", and the editor gets the mark
   in its toolbar and loading screen.
+* adding a show/hide button to password fields on the server-rendered sign-in and password
+  pages. It uses Lucide's eye icons (`class="lucide lucide-eye h-4 w-4"`, and `lucide-eye-off`
+  while shown), has `aria-label` and `aria-pressed`, and re-hides the password on submit. React
+  pages (account settings) are left as they are.
+* toning down the footer: 12 px muted text, a dot instead of the `|`, and the upstream
+  disclaimer kept as 11 px fine print.
 
 ## Changing it
 
@@ -46,6 +53,5 @@ The theme works by:
 * Selectors target upstream markup and CSS variables of image `6.3.0`. After an upgrade,
   check the login page, dashboard (light and dark), editor and password reset.
 * The Safari pinned-tab icon (`mask-favicon.svg`) is monochrome by design.
-* `OVERLEAF_ADMIN_EMAIL` is unset, so `/register` says "contact placeholder@example.com".
-  Set it to the lab's contact address.
-* Inter is SIL OFL 1.1 (`lambdatex/Inter-LICENSE.txt`).
+* `/register` shows `OVERLEAF_ADMIN_EMAIL` (set from `EMAIL__REPLY_TO` in `.env`) as the contact.
+* Inter is SIL OFL 1.1 (`lambdatex/Inter-LICENSE.txt`). The Lucide icon paths are ISC.

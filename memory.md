@@ -15,7 +15,8 @@
   `ghcr.io/ayaka-notes/overleaf-pro:6.3.0`, mongo 8.0, redis 7.4, sibling-container compiles
   with `ghcr.io/ayaka-notes/texlive-full:2026.1` (~29 GB).
 - UI: `http://10.110.188.149:8001/` (internal network; `OVERLEAF_LISTEN_IP=0.0.0.0`, `OVERLEAF_PORT=8001`, `OVERLEAF_SITE_URL` set). Plain HTTP. ufw is active but Docker-published ports bypass it. "Connection refused" earlier was a loopback-only binding, not the firewall.
-  `~/.config/ayakaleaf/admin-password`.
+- Admin account comes from `.env` (`SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD`) and is applied with
+  `deploy/scripts/seed-admin.sh` (idempotent; `--replace old@x` renames an account, keeping its projects).
 - Data: `~/ayakaleaf-toolkit/data/{overleaf,mongo,redis}`.
 - AI config + secret: **only** `~/ayakaleaf-pro/.env` (git-ignored, chmod 600), loaded by
   `~/ayakaleaf-toolkit/config/docker-compose.override.yml`. The user explicitly wants a single
@@ -29,6 +30,14 @@
   Only generated assets are committed (no model file, no website source).
 - CSS changes: bump `?v=N` in `deploy/branding/nginx/lambdatex-branding.conf`, then
   `docker exec sharelatex nginx -s reload`.
+
+## Mail
+- `.env` holds the user's `EMAIL__*` block plus `OVERLEAF_EMAIL_*` lines that interpolate it
+  (compose expands `${EMAIL__…}` in env files). `extra_hosts: host.docker.internal:host-gateway`
+  is in the override.
+- No SMTP relay listens on port 25 on this VM, so delivery fails (`ECONNREFUSED`) and
+  "Forgot your password?" returns 500 until `EMAIL__HOST` points at a real relay.
+- SMTP_USER/PASS are left undefined: Overleaf enables AUTH when they are defined, even empty.
 
 ## Gotchas
 - `bin/up` pulls the TeX Live image before starting. Use `SIBLING_CONTAINERS_PULL=false bin/up -d`

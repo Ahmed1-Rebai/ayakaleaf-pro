@@ -3,15 +3,15 @@
 Run on 2026-10-14 against the lab deployment: Ubuntu 24.04, Docker 29.1.3, Compose v2.29.2,
 8 vCPU / 7.8 GB RAM. Image `ghcr.io/ayaka-notes/overleaf-pro:6.3.0` (built from upstream
 `7e6ffc2`), TeX Live `ghcr.io/ayaka-notes/texlive-full:2026.1`. The scripts are in
-[`deploy/tests/`](../deploy/tests/). They read secrets from `.env` and
-`~/.config/ayakaleaf/admin-password`, and never print them.
+[`deploy/tests/`](../deploy/tests/). They read secrets, including the admin
+account (`SEED_ADMIN_*`), from `.env` and never print them.
 
 ## Platform (`deploy/tests/e2e_platform.py`)
 
 | Test | Result | Detail |
 |---|---|---|
 | Web UI up | ✅ PASS | `GET /status` → `web is alive`; `/login`, `/launchpad` → 200 |
-| First admin via `/launchpad` | ✅ PASS | `admin@ayakaleaf.local` |
+| First admin via `/launchpad` | ✅ PASS | initial account; later renamed by the `.env` seed (see below) |
 | Login (session + CSRF) | ✅ PASS | |
 | Create project (zip upload) | ✅ PASS | |
 | Compile → PDF | ✅ PASS | `status=success`, 2.2 s first compile, valid `%PDF-` (49,764 B) |
@@ -68,7 +68,23 @@ Checked with headless Chromium (Playwright) screenshots at 1440×900, and at 390
 | Phone width login: no horizontal overflow | ✅ |
 | Platform E2E (login, create, compile, save, export) after rebranding | ✅ PASS |
 
+## Admin seed, password toggle, mail (2026-10-14)
+
+| Check | Result | Detail |
+|---|---|---|
+| `seed-admin.sh --replace admin@ayakaleaf.local` | ✅ PASS | `admin@lambdalab.org: renamed …; password updated; isAdmin true` |
+| Seed again (idempotency) | ✅ PASS | `exists; password unchanged; isAdmin true` |
+| Login with `.env` admin; old email rejected | ✅ PASS | new: `/project`, 9 projects kept, Admin menu present; old: stays on `/login` |
+| Platform E2E using `.env` credentials | ✅ PASS | login, create, compile, save, recompile, export |
+| Password toggle (Playwright) | ✅ PASS | icon `lucide lucide-eye h-4 w-4` → click → `type=text`, `lucide-eye-off`, `aria-pressed=true` → click → `password`; no CSP violations |
+| Script nonce equals the CSP header nonce | ✅ PASS | checked on `/login` |
+| Mail settings resolved in Overleaf | ✅ PASS | from `Lambda Research Lab <contact@lambdalab.org>`, `host.docker.internal:25`, no TLS, no auth |
+| SMTP relay reachable | ❌ FAIL | `ECONNREFUSED 172.17.0.1:25`: nothing listens on port 25 on this VM |
+| "Forgot your password?" with mail on | ❌ FAIL (expected without a relay) | HTTP 500, log `ECONNREFUSED`; no mail could leave the host |
+
 ## Known limitations
+
+* **Mail does not deliver yet**: `EMAIL__HOST=host.docker.internal:25` has no SMTP server on this VM.
 
 * **Agentic editing not yet verified** (gateway backend outage during testing). Key 1 is over budget.
 * The browser UI (chat panel, diff approval) was exercised via its HTTP/stream protocol, not by clicking in a real browser.

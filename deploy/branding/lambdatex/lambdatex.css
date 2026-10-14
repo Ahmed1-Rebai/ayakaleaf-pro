@@ -528,13 +528,66 @@ html .project-ds-nav-page .ds-nav-ds-name::after {
 
 /* ----------------------------------------------------------------- footer */
 
+html body {
+  --lt-footer-text: #64748b;
+  --lt-footer-fine: #94a3b8;
+}
+
+html body[data-theme="default"] {
+  --lt-footer-text: #8b95a7;
+  --lt-footer-fine: #6b7280;
+}
+
 html footer.site-footer {
-  border-top-color: var(--lt-nav-border);
+  padding: 18px 12px 22px;
+  border-top: 1px solid var(--lt-nav-border);
+  background: transparent;
+  font-size: 12px;
+  line-height: 1.6;
+  letter-spacing: 0.005em;
+  color: var(--lt-footer-text);
+}
+
+html footer.site-footer .row {
+  align-items: center;
+  row-gap: 4px;
+}
+
+html footer.site-footer ul.site-footer-items > li {
+  margin: 0 7px;
+  vertical-align: middle;
+}
+
+html footer.site-footer a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+html footer.site-footer a:hover,
+html footer.site-footer a:focus-visible {
+  color: var(--lt-accent);
+}
+
+/* The upstream "|" separator becomes a small dot. */
+html footer.site-footer ul.site-footer-items > li > strong.text-muted {
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  font-size: 0;
+  opacity: 0.55;
+  vertical-align: middle;
 }
 
 html footer.site-footer .copyright-notice {
-  font-size: 12px;
-  opacity: 0.75;
+  max-width: 980px;
+  margin: 2px 7px 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--lt-footer-fine);
+  opacity: 1;
 }
 
 /* Dashboard navbar shares the sidebar surface in both themes. */
@@ -619,3 +672,51 @@ html .auth-aux-container .btn-primary {
   background-image: linear-gradient(180deg, #3b7bf6 0%, #2563eb 100%);
   box-shadow: var(--lt-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
+
+/* ------------------------------------------ password show/hide (lambdatex.js) */
+
+html .lt-password-field {
+  position: relative;
+}
+
+html .lt-password-field > input.form-control {
+  padding-right: 48px;
+}
+
+/* One reveal control only: hide the browser's own (Edge). */
+html .lt-password-field > input::-ms-reveal {
+  display: none;
+}
+
+html .lt-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--lt-subtle-text, #475569);
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+html .lt-password-toggle:hover {
+  color: var(--lt-accent);
+  background: rgba(37, 99, 235, 0.08);
+}
+
+html .lt-password-toggle:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.35);
+}
+
+/* Tailwind's h-4 / w-4, which the Lucide markup carries. */
+html .lt-password-toggle .h-4 { height: 1rem; }
+html .lt-password-toggle .w-4 { width: 1rem; }

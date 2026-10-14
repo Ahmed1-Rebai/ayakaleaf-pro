@@ -11,6 +11,9 @@ services:
       - /home/user/ayakaleaf-pro/.env
       # LambdaTeX branding (no secrets)
       - /home/user/ayakaleaf-pro/deploy/branding/branding.env
+    # EMAIL__HOST=host.docker.internal: Linux needs this mapping to the host gateway
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       # LambdaTeX theme: assets, stylesheet injection, replacement icons
       - /home/user/ayakaleaf-pro/deploy/branding/lambdatex:/overleaf/services/web/public/img/lambdatex:ro
@@ -27,3 +30,5 @@ services:
       - /home/user/ayakaleaf-pro/deploy/branding/lambdatex/favicon-error.svg:/overleaf/services/web/public/favicon-error.svg:ro
       - /home/user/ayakaleaf-pro/deploy/branding/lambdatex/lambda-logo.svg:/overleaf/services/web/public/img/ol-brand/overleaf-o-dark.svg:ro
       - /home/user/ayakaleaf-pro/deploy/branding/lambdatex/lambda-logo.svg:/overleaf/services/web/public/img/ol-brand/overleaf-o.svg:ro
+      # Admin seed script (deploy/scripts/seed-admin.sh)
+      - /home/user/ayakaleaf-pro/deploy/scripts:/overleaf/services/web/modules/server-ce-scripts/scripts/lambdatex:ro

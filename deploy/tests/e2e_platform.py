@@ -5,8 +5,16 @@ import io, json, os, re, subprocess, sys, time, zipfile
 import requests
 
 BASE = os.environ.get("OL_URL", "http://127.0.0.1")
-EMAIL = os.environ.get("OL_EMAIL", "admin@ayakaleaf.local")
-PW = open(os.path.expanduser("~/.config/ayakaleaf/admin-password")).read().strip()
+def _dotenv(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".env")):
+    out = {}
+    for line in open(path):
+        m = re.match(r'^([A-Z0-9_]+)=(.*)$', line.strip())
+        if m: out[m.group(1)] = m.group(2).strip().strip('"').strip("'")
+    return out
+_ENV = _dotenv()
+# Admin account from .env (SEED_ADMIN_*), overridable with OL_EMAIL / OL_PW
+EMAIL = os.environ.get("OL_EMAIL") or _ENV["SEED_ADMIN_EMAIL"]
+PW = os.environ.get("OL_PW") or _ENV["SEED_ADMIN_PASSWORD"]
 STATE = os.path.expanduser("~/ayakaleaf-tests/state.json")
 OUT = os.path.expanduser("~/ayakaleaf-tests/out")
 os.makedirs(OUT, exist_ok=True)
