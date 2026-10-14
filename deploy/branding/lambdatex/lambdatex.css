@@ -581,13 +581,10 @@ html footer.site-footer ul.site-footer-items > li > strong.text-muted {
   vertical-align: middle;
 }
 
+/* Upstream's Community Edition disclaimer row is hidden (operator's choice). */
+html footer.site-footer .row:has(> .col-12 > .copyright-notice),
 html footer.site-footer .copyright-notice {
-  max-width: 980px;
-  margin: 2px 7px 0;
-  font-size: 11px;
-  line-height: 1.6;
-  color: var(--lt-footer-fine);
-  opacity: 1;
+  display: none;
 }
 
 /* Dashboard navbar shares the sidebar surface in both themes. */

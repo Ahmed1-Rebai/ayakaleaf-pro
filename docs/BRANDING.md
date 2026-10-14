@@ -33,8 +33,9 @@ The theme works by:
   pages. It uses Lucide's eye icons (`class="lucide lucide-eye h-4 w-4"`, and `lucide-eye-off`
   while shown), has `aria-label` and `aria-pressed`, and re-hides the password on submit. React
   pages (account settings) are left as they are.
-* toning down the footer: 12 px muted text, a dot instead of the `|`, and the upstream
-  disclaimer kept as 11 px fine print.
+* toning down the footer: 12 px muted text and a dot instead of the `|`. Upstream's Community
+  Edition disclaimer paragraph is hidden (operator's choice; it is not an AGPL requirement).
+  The "Powered by Overleaf" and source-code links remain.
 
 ## Changing it
 
