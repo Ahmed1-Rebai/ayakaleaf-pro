@@ -47,8 +47,10 @@ One folder per module in `toolkit/suites/`, named and nested like
   clearing the canvas.
 - `track-changes/` – editing, reviewing and viewing modes, tracked insertions
   and deletions, accepting and rejecting them, comments (reply, edit, delete,
-  resolve, re-open), and which routes owners, editors, reviewers, viewers,
-  link viewers and other users may call.
+  resolve, re-open), the Overview tab listing the comments of docs that are
+  not loaded in the document-updater (a copied project), the authors of
+  tracked changes not saved to docstore yet, and which routes owners, editors,
+  reviewers, viewers, link viewers and other users may call.
 - `git-bridge/` – git tokens in the settings, cloning, pushing and pulling
   with the git CLI: binary files, folders, renames, deletes, out-of-date
   pushes, and access for invited and link-shared editors, reviewers and

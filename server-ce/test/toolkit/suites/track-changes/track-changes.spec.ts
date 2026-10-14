@@ -4,8 +4,9 @@ import {
   createProject,
   openProject,
   projectName,
+  waitForDocText,
 } from '../../../helpers/project'
-import { requestWithCsrf } from '../../../helpers/request'
+import { postWithCsrf, requestWithCsrf } from '../../../helpers/request'
 import { shareProject, shareProjectByLink } from '../../../helpers/sharing'
 import {
   addComment,
@@ -17,7 +18,7 @@ import {
   waitForComment,
   waitForServer,
 } from '../../../helpers/review'
-import { ensureUserExists } from '../../../helpers/users'
+import { ADMIN_EMAIL, ensureUserExists } from '../../../helpers/users'
 
 // track-changes module: editing modes, tracked changes and comments in the
 // review panel, and who may do what with them.
@@ -213,6 +214,25 @@ describe('tracked changes', function () {
   })
 })
 
+// The review panel names the authors of tracked changes from this route, also
+// those who left the project
+describe('authors of tracked changes', function () {
+  it('lists the author of a change that is not in docstore yet', function () {
+    createSharedProject().then(projectId => {
+      login(reviewer)
+      openProject(projectId)
+      typeNewLine('Not saved to docstore')
+      // In document-updater only, until something flushes the doc
+      waitForDocText(projectId, 'main.tex', 'Not saved to docstore')
+      cy.request(`/project/${projectId}/changes/users`)
+        .its('body')
+        .should((users: { email: string }[]) => {
+          expect(users.map(user => user.email)).to.include(reviewer)
+        })
+    })
+  })
+})
+
 describe('comments', function () {
   let projectId: string
 
@@ -293,6 +313,61 @@ describe('comments', function () {
     // Neither the Insert menu nor the toolbar offers a comment
     cy.findByRole('button', { name: 'Insert', exact: true }).should('not.exist')
     cy.get('#toolbar-add-comment').should('not.exist')
+  })
+})
+
+// The Overview tab lists the comments and changes of every doc, also of docs
+// that the document-updater has not loaded. It only loads a doc when someone
+// opens it, so the docs of a copied project start out in docstore only.
+describe('overview', function () {
+  it('lists the comments of docs that are not loaded', function () {
+    // Only admins can copy a project with its comments
+    login(ADMIN_EMAIL)
+    createProject(projectName('Overview')).then(sourceId => {
+      openProject(sourceId)
+      cy.findByRole('tab', { name: 'File tree' }).then(tab => {
+        if (tab.attr('aria-selected') !== 'true') cy.wrap(tab).click()
+      })
+      cy.findByRole('button', { name: 'New file' }).click()
+      cy.findByRole('dialog').within(() => {
+        cy.findByLabelText(/^File name$/i)
+          .clear()
+          .type('chapter.tex')
+        cy.findByRole('button', { name: 'Create' }).click()
+      })
+      // The new doc opens in the editor
+      cy.get('.cm-content').should('not.contain.text', 'Introduction')
+      cy.get('.cm-content').type('Chapter text')
+      addComment(sourceId, 'Chapter text', 'Comment in the chapter')
+
+      postWithCsrf(`/project/${sourceId}/clone`, {
+        projectName: projectName('Copy'),
+        cloneRanges: true,
+      }).then(response => {
+        const copyId = response.body.project_id
+
+        // The copy opens on main.tex and leaves chapter.tex unloaded
+        openProject(copyId)
+        cy.request(`/project/${copyId}/threads`).then(threads => {
+          const threadId = Object.keys(threads.body).find(
+            id =>
+              threads.body[id].messages[0].content === 'Comment in the chapter'
+          )
+          expect(threadId).to.be.a('string')
+          cy.request(`/project/${copyId}/ranges`)
+            .its('body')
+            .then(body => {
+              expect(JSON.stringify(body)).to.contain(`"t":"${threadId}"`)
+            })
+        })
+
+        openReviewPanel()
+        cy.findByRole('tab', { name: 'Overview' }).click()
+        cy.get('#review-panel-overview')
+          .should('contain.text', 'chapter.tex')
+          .and('contain.text', 'Comment in the chapter')
+      })
+    })
   })
 })
 

@@ -79,3 +79,31 @@ export function compileProject(
     return pdf.build as string
   })
 }
+
+// Polls the text of an open project's doc as document-updater has it, until
+// it contains the text: the editor has sent the edit, which is in Redis but
+// maybe not yet in docstore or the history.
+export function waitForDocText(
+  projectId: string,
+  name: string,
+  text: string,
+  attempt = 1
+) {
+  cy.findByRole('tab', { name: 'File tree' }).then(tab => {
+    if (tab.attr('aria-selected') !== 'true') cy.wrap(tab).click()
+  })
+  cy.findByRole('treeitem', { name })
+    .find('[data-file-id]')
+    .invoke('attr', 'data-file-id')
+    .then(docId =>
+      cy.request(`/Project/${projectId}/doc/${docId}/download`)
+    )
+    .then(response => {
+      if (!response.body.includes(text) && attempt < 20) {
+        cy.wait(500)
+        waitForDocText(projectId, name, text, attempt + 1)
+      } else {
+        expect(response.body).to.contain(text)
+      }
+    })
+}
