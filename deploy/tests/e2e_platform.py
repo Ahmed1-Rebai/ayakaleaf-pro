@@ -4,7 +4,7 @@ download PDF, export zip. Usage: e2e_platform.py run | verify-persist"""
 import io, json, os, re, subprocess, sys, time, zipfile
 import requests
 
-BASE = os.environ.get("OL_URL", "http://127.0.0.1")
+BASE = os.environ.get("OL_URL", "http://127.0.0.1:8001")
 def _dotenv(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".env")):
     out = {}
     for line in open(path):

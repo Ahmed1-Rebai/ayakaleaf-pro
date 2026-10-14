@@ -5,7 +5,8 @@ after checking existingContent, i.e. "approving the diff"), sends results back
 as AI SDK v6 UI-message tool parts, then compiles."""
 import json, os, sys, uuid
 sys.argv = [sys.argv[0]]
-ns = {}; exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "e2e_platform.py")).read().split('{"run"')[0], ns)
+_E2E = os.path.join(os.path.dirname(os.path.abspath(__file__)), "e2e_platform.py")
+ns = {"__file__": _E2E}; exec(open(_E2E).read().split('{"run"')[0], ns)
 B, login, zip_of, upload, export_zip, compile_pdf = (ns[k] for k in ("BASE", "login", "zip_of", "upload", "export_zip", "compile_pdf"))
 DOC = "\\documentclass{article}\n\\begin{document}\nHello.\n\n\\begin{itemiz}\n\\item one\n\\end{itemiz}\n\\end{document}\n"
 
