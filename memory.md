@@ -14,7 +14,7 @@
 - Toolkit: `~/ayakaleaf-toolkit` (`ayaka-notes/toolkit`), `SERVER_PRO=true`, image
   `ghcr.io/ayaka-notes/overleaf-pro:6.3.0`, mongo 8.0, redis 7.4, sibling-container compiles
   with `ghcr.io/ayaka-notes/texlive-full:2026.1` (~29 GB).
-- UI: `http://127.0.0.1:8001/` (`OVERLEAF_PORT=8001`; localhost-bound). To open it to the LAN, set `OVERLEAF_LISTEN_IP=0.0.0.0` and `OVERLEAF_SITE_URL=http://10.110.188.149:8001`, then `bin/docker-compose up -d sharelatex`. Admin `admin@ayakaleaf.local`, password in
+- UI: `http://10.110.188.149:8001/` (internal network; `OVERLEAF_LISTEN_IP=0.0.0.0`, `OVERLEAF_PORT=8001`, `OVERLEAF_SITE_URL` set). Plain HTTP. ufw is active but Docker-published ports bypass it. "Connection refused" earlier was a loopback-only binding, not the firewall.
   `~/.config/ayakaleaf/admin-password`.
 - Data: `~/ayakaleaf-toolkit/data/{overleaf,mongo,redis}`.
 - AI config + secret: **only** `~/ayakaleaf-pro/.env` (git-ignored, chmod 600), loaded by

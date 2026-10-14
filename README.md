@@ -105,7 +105,7 @@ docker logs -f sharelatex    # container stdout
 bin/doctor                   # environment diagnostics
 ```
 
-The UI listens on **http://127.0.0.1:8001/** (`OVERLEAF_PORT=8001`, `OVERLEAF_LISTEN_IP=127.0.0.1` in `config/overleaf.rc`).
+The UI is served on the internal network at **http://10.110.188.149:8001/** (`OVERLEAF_PORT=8001`, `OVERLEAF_LISTEN_IP=0.0.0.0` in `config/overleaf.rc`; `OVERLEAF_SITE_URL=http://10.110.188.149:8001` in `config/variables.env`). Plain HTTP: for anything beyond internal testing, use TLS.
 From another machine use an SSH tunnel (`ssh -L 8001:127.0.0.1:8001 <host>`), or put a TLS
 proxy in front (`bin/init --tls`) rather than exposing port 80. Create the first admin at
 `/launchpad`; manage users at `/admin`.
