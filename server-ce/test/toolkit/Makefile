@@ -48,7 +48,9 @@ setup:
 	git -C $(TOOLKIT_DIR) checkout --quiet $(TOOLKIT_REF)
 	$(TOOLKIT_DIR)/bin/init
 	cp config/settings.cjs $(TOOLKIT_DIR)/config/
-	cp config/docker-compose.e2e.yml $(TOOLKIT_DIR)/config/docker-compose.override.yml
+	@# A suite can replace the override with its own suites/<suite>/docker-compose.e2e.yml
+	cp $(or $(wildcard suites/$(SUITE)/docker-compose.e2e.yml),config/docker-compose.e2e.yml) \
+		$(TOOLKIT_DIR)/config/docker-compose.override.yml
 	bin/apply-config $(TOOLKIT_DIR)/config/overleaf.rc config/overleaf.rc
 	bin/apply-config $(TOOLKIT_DIR)/config/variables.env config/variables.env
 	@for f in overleaf.rc variables.env; do \

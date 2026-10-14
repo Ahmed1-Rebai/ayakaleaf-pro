@@ -133,6 +133,18 @@ describe('git access to a project', function () {
       .should('contain', '\\documentclass')
   })
 
+  it("keeps git-bridge's internal routes behind nginx", function () {
+    for (const path of [
+      `/git/api/v0/docs/${projectId}`,
+      '/git/metrics',
+      '/git/diags',
+    ]) {
+      cy.request({ url: path, failOnStatusCode: false })
+        .its('status')
+        .should('equal', 404)
+    }
+  })
+
   it('pushes a change that shows in the editor and in the history', function () {
     login(owner)
     const dir = workingCopy('push')

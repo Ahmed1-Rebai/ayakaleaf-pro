@@ -54,7 +54,8 @@ One folder per module in `toolkit/suites/`, named and nested like
 - `git-bridge/` – git tokens in the settings, cloning, pushing and pulling
   with the git CLI: binary files, folders, renames, deletes, out-of-date
   pushes, and access for invited and link-shared editors, reviewers and
-  viewers.
+  viewers. git-bridge runs on port 8001, so nginx must follow
+  `GIT_BRIDGE_HOST`/`GIT_BRIDGE_PORT`, and its internal routes stay 404.
 - `oauth2-server/` – the Git authentication tokens in the settings: generating,
   the token shown once, the table with its dates and last use, cancelling and
   deleting, the 10 token limit, and the API behind it: one year validity, no
@@ -150,6 +151,9 @@ Things that need email (activation mails, password reset) are not tested.
   `config/overleaf.rc` and `config/variables.env`.
 - `toolkit/suites/<name>/overleaf.rc`, `variables.env` – optional extra
   settings for just that suite, applied after `toolkit/config/`.
+- `toolkit/suites/<name>/docker-compose.e2e.yml` – optional, replaces
+  `toolkit/config/docker-compose.e2e.yml` for that suite, for settings the
+  toolkit fixes in its compose files (keep the e2e lines in it).
 - `toolkit/suites/<name>/<variant>/` – optional second mode of the same
   module: its own specs plus the settings that differ. `make test_<name>`
   applies them, restarts Overleaf and runs the variant after the main specs.
