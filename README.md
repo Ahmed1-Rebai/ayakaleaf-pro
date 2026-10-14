@@ -131,6 +131,7 @@ the user must approve.
 | AI panel missing / `403 ai_not_configured` | `AI_ENABLED`, `AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL` must all be set in the container: `docker exec sharelatex sh -c 'echo ${#AI_API_KEY}'` should print a non-zero length. |
 | `403 ai_access_denied` | An admin disabled AI for that user (`aiFeatures.enabled=false`). |
 | Compile fails with Docker errors | Docker socket must be mounted (`SIBLING_CONTAINERS_ENABLED=true`) and the TeX Live image present locally. |
+| Page not reachable from other machines (`ERR_CONNECTION_REFUSED`) | Check `docker port sharelatex`: `127.0.0.1:8001` means it is bound to loopback only. Set `OVERLEAF_LISTEN_IP=0.0.0.0`, then `bin/docker-compose up -d sharelatex`. A timeout instead of a refusal points to a network firewall. |
 | Port already in use | Change `OVERLEAF_PORT` in `config/overleaf.rc` (this deployment uses 8001), then `bin/docker-compose up -d sharelatex`. |
 
 ## Upgrading
