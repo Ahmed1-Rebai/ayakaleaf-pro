@@ -105,8 +105,8 @@ docker logs -f sharelatex    # container stdout
 bin/doctor                   # environment diagnostics
 ```
 
-The UI listens on **http://127.0.0.1/** only (`OVERLEAF_LISTEN_IP` in `config/overleaf.rc`).
-From another machine use an SSH tunnel (`ssh -L 8080:127.0.0.1:80 <host>`), or put a TLS
+The UI listens on **http://127.0.0.1:8001/** (`OVERLEAF_PORT=8001`, `OVERLEAF_LISTEN_IP=127.0.0.1` in `config/overleaf.rc`).
+From another machine use an SSH tunnel (`ssh -L 8001:127.0.0.1:8001 <host>`), or put a TLS
 proxy in front (`bin/init --tls`) rather than exposing port 80. Create the first admin at
 `/launchpad`; manage users at `/admin`.
 
@@ -131,7 +131,7 @@ the user must approve.
 | AI panel missing / `403 ai_not_configured` | `AI_ENABLED`, `AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL` must all be set in the container: `docker exec sharelatex sh -c 'echo ${#AI_API_KEY}'` should print a non-zero length. |
 | `403 ai_access_denied` | An admin disabled AI for that user (`aiFeatures.enabled=false`). |
 | Compile fails with Docker errors | Docker socket must be mounted (`SIBLING_CONTAINERS_ENABLED=true`) and the TeX Live image present locally. |
-| Port 80 already in use | Change `OVERLEAF_PORT` in `config/overleaf.rc`. |
+| Port already in use | Change `OVERLEAF_PORT` in `config/overleaf.rc` (this deployment uses 8001), then `bin/docker-compose up -d sharelatex`. |
 
 ## Upgrading
 
