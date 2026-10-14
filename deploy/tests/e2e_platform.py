@@ -15,8 +15,10 @@ _ENV = _dotenv()
 # Admin account from .env (SEED_ADMIN_*), overridable with OL_EMAIL / OL_PW
 EMAIL = os.environ.get("OL_EMAIL") or _ENV["SEED_ADMIN_EMAIL"]
 PW = os.environ.get("OL_PW") or _ENV["SEED_ADMIN_PASSWORD"]
-STATE = os.path.expanduser("~/ayakaleaf-tests/state.json")
-OUT = os.path.expanduser("~/ayakaleaf-tests/out")
+# Test output (PDFs, logs, state) goes outside the repo; override with LT_TEST_DIR
+TEST_DIR = os.environ.get("LT_TEST_DIR", "/tmp/lambdatex-tests")
+STATE = os.path.join(TEST_DIR, "state.json")
+OUT = os.path.join(TEST_DIR, "out")
 os.makedirs(OUT, exist_ok=True)
 
 def csrf(s, path):

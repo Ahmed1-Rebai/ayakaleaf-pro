@@ -11,9 +11,12 @@
   set up, but gitkube's port 22 is not reachable from this VM.
 - Commits: author Ahmed1-Rebai only, never a Co-Authored-By trailer (user preference).
 - Upstream source: `ayaka-notes/ayakaleaf-pro` (`server-pro`, image built from `7e6ffc2`).
-  The older full fork (`~/ayakaleaf-pro`, GitHub `Ahmed1-Rebai/ayakaleaf-pro`, branch
-  `lab/llm-gateway-deploy`) is where this history started; this repo replays only its
-  deployment commits.
+  The older full fork (GitHub `Ahmed1-Rebai/ayakaleaf-pro`, branch `lab/llm-gateway-deploy`)
+  is where this history started; this repo replays only its deployment commits. Its local
+  clone was removed when the VM was cleaned (2026-10-14).
+- The VM runs only LambdaTeX: Docker holds just overleaf-pro:6.3.0, texlive-full:2026.1,
+  mongo:8.0 and redis:7.4 (never `docker image prune -a`: no container keeps TeX Live in use).
+  Test output goes to `/tmp/lambdatex-tests` (`LT_TEST_DIR`).
 
 ## Deployment layout (host)
 - Toolkit: `~/ayakaleaf-toolkit` (`ayaka-notes/toolkit`), `SERVER_PRO=true`, image

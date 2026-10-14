@@ -13,7 +13,7 @@ s = login(); print("PASS login")
 r = s.post(BASE + "/project/new/upload", files={"qqfile": ("err.zip", zip_of({"main.tex": BROKEN}), "application/zip")}, data={"name": "err.zip"})
 pid = r.json()["project_id"]; print("project", pid)
 st, _ = compile_pdf(s, pid, "broken"); print(f"compile status for broken doc: {st} (expected failure/error)")
-log = open(os.path.expanduser("~/ayakaleaf-tests/out/broken.log")).read()
+log = open(os.path.join(ns["OUT"], "broken.log")).read()
 err_line = next((l for l in log.splitlines() if l.startswith("!")), "")
 print("first LaTeX error:", err_line)
 
@@ -46,4 +46,4 @@ for raw in r.iter_lines():
 print("   event types:", kinds); print("   text:", text[:400].replace("\n", "\\n"))
 ok_chat = "\\begin{tabular}" in text
 print(f"{'PASS' if ok_chat else 'FAIL'} chat latex-generation ({time.time()-t:.1f}s)")
-json.dump({"error_project_id": pid}, open(os.path.expanduser("~/ayakaleaf-tests/ai_state.json"), "w"))
+json.dump({"error_project_id": pid}, open(os.path.join(ns["TEST_DIR"], "ai_state.json"), "w"))

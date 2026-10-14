@@ -48,13 +48,13 @@ for turn in range(8):
         elif name in ("get_diagnostics", "compile"):
             st, _ = compile_pdf(s, pid, f"agent-{turn}")
             out = {"logsReady": True, "compiling": False, "hasUncompiledChanges": False,
-                   "errors": [l.strip() for l in open(os.path.expanduser(f"~/ayakaleaf-tests/out/agent-{turn}.log")) if l.startswith("!")]}
+                   "errors": [l.strip() for l in open(os.path.join(ns["OUT"], f"agent-{turn}.log")) if l.startswith("!")]}
         else: out = {"error": f"tool {name} not available in this test"}
         print(f"turn {turn}: {name}({json.dumps(inp)[:140]}) -> {json.dumps(out)[:120]}")
         parts.append({"type": f"tool-{name}", "toolCallId": c["toolCallId"], "state": "output-available", "input": inp, "output": out})
     msgs.append({"id": str(uuid.uuid4()), "role": "assistant", "parts": parts})
 st, pdf = compile_pdf(s, pid, "agent-final")
-errs = [l for l in open(os.path.expanduser("~/ayakaleaf-tests/out/agent-final.log")) if l.startswith("!")]
+errs = [l for l in open(os.path.join(ns["OUT"], "agent-final.log")) if l.startswith("!")]
 ok = edits > 0 and "itemiz}" not in cur().replace("itemize}", "") and not errs
 print(f"tool calls: {calls}; approved edits applied: {edits}; LaTeX errors after: {len(errs)}")
 print(("PASS" if ok else "FAIL"), "agentic editing (read -> replace_lines -> compile)")
