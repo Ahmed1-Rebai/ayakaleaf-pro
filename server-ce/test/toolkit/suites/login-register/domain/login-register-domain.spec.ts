@@ -1,9 +1,16 @@
 import { v4 as uuid } from 'uuid'
+import { DEFAULT_PASSWORD } from '../../../../helpers/login'
+import {
+  activationLink,
+  emailsTo,
+  refuseEmails,
+  waitForEmail,
+} from '../../../../helpers/mailpit'
 import { postRegister } from '../../../../helpers/register'
 
 // login-register module with OVERLEAF_ALLOW_PUBLIC_REGISTRATION=@example.com:
 // only that domain can sign up, with the email alone. A successful sign up
-// sends an activation email, which these tests do not cover.
+// sends an activation email, through Mailpit (services/mailpit).
 
 describe('register restricted to a domain', function () {
   it('shows only the email field', function () {
@@ -55,5 +62,35 @@ describe('register restricted to a domain', function () {
     postRegister({ email: '' }).then(response => {
       expect(response.status).to.equal(422)
     })
+  })
+})
+
+describe('activation email of a sign up', function () {
+  afterEach(function () {
+    refuseEmails(false)
+  })
+
+  it('sends the activation email, whose link sets the password', function () {
+    const email = `new-${uuid()}@example.com`
+    postRegister({ email }).its('status').should('equal', 200)
+    waitForEmail(email).then(text => {
+      cy.clearAllCookies()
+      cy.visit(activationLink(text))
+      cy.get('input[name="password"]').type(DEFAULT_PASSWORD)
+      cy.findByRole('button', { name: 'Activate' }).click()
+      cy.url().should('contain', '/project')
+    })
+  })
+
+  it('signs up when the email cannot be sent, and sends it on the next try', function () {
+    const email = `refused-${uuid()}@example.com`
+    refuseEmails(true)
+    postRegister({ email }).its('status').should('equal', 200)
+    emailsTo(email).should('have.length', 0)
+
+    // Signing up again sends the activation email of the account
+    refuseEmails(false)
+    postRegister({ email }).its('status').should('equal', 200)
+    waitForEmail(email).should('contain', '/user/activate?token=')
   })
 })

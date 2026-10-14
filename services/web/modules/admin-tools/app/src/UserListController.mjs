@@ -147,8 +147,6 @@ async function registerNewUser(req, res, next) {
     }
     if (isExternal) {
       update.$unset = { hashedPassword: "" }
-    } else {
-      await _sendActivationEmail(user._id.toString())
     }
     await User.updateOne({ _id: user._id }, update).exec()
   } catch (err) {
@@ -156,6 +154,16 @@ async function registerNewUser(req, res, next) {
       email: user.email,
     })
     throw err
+  }
+
+  // The account exists by now, a failed email must not fail the request:
+  // the admin can resend the activation email from the user list
+  if (!isExternal) {
+    try {
+      await _sendActivationEmail(user._id.toString())
+    } catch (err) {
+      logger.warn({ err, userId: user._id }, 'failed to send activation email to new user')
+    }
   }
 
   const authMethods = isExternal ? [] : ['local']
@@ -488,6 +496,9 @@ async function deleteUser(req, res, next) {
       deleterUser: { '_id': deleterUserId },
       ipAddress: req.ip,
       skipEmail: !sendEmail,
+      // a failed email must not stop the deletion halfway: by then the
+      // user's projects are already deleted
+      force: true,
     })
   } catch (err) {
     logger.warn({ deleterUserId, userId }, err.message)

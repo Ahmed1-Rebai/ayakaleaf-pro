@@ -5,6 +5,7 @@ import Docker from 'dockerode'
 import crypto from 'node:crypto'
 import async from 'async'
 import LockManager from './DockerLockManager.js'
+import { getLastProjectAccessTime } from './LastProjectAccess.js'
 import Path from 'node:path'
 import _ from 'lodash'
 
@@ -561,6 +562,16 @@ const DockerRunner = {
       for (const container of containers) {
         const { name, id, ttl } = DockerRunner.examineOldContainer(container)
         if (name.slice(0, 9) === '/project-' && ttl <= 0) {
+          // containers are reused across compiles, keep those of projects
+          // compiled within MAX_CONTAINER_AGE
+          const projectId = name.match(/^\/project-([a-f0-9]{24})-/)?.[1]
+          if (
+            projectId &&
+            getLastProjectAccessTime(projectId) >
+              Date.now() - DockerRunner.MAX_CONTAINER_AGE
+          ) {
+            continue
+          }
           // strip the / prefix
           // the LockManager uses the plain container name
           const plainName = name.slice(1)
