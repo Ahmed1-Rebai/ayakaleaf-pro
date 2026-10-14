@@ -68,6 +68,17 @@ Checked with headless Chromium (Playwright) screenshots at 1440×900, and at 390
 | Phone width login: no horizontal overflow | ✅ |
 | Platform E2E (login, create, compile, save, export) after rebranding | ✅ PASS |
 
+## AI on the current gateway (LiteLLM `10.110.150.21:30883`, `groq/openai/gpt-oss-120b`)
+
+| Test | Result | Detail |
+|---|---|---|
+| `gateway_test.py`: auth + models / bad key | ✅ PASS | 200, 3 models, configured model listed / 401 |
+| chat · streaming | ✅ PASS | 0.3 s, `GATEWAY-OK` · 33 SSE chunks, usage in final chunk |
+| tools · streamed tools · tool round-trip | ✅ PASS | `suggestLineChange` with valid JSON; coherent reply after `role: tool` |
+| `ai_app_test.py`: Error Assistant | ✅ PASS | line 5 `\begin{itemiz}` → `\begin{itemize}`, 0.7 s |
+| `ai_app_test.py`: chat LaTeX generation | ✅ PASS | reasoning → text stream, correct `tabular`, 1.4 s |
+| `ai_agentic_test.py`: agentic editing | ✅ PASS | `read_current_file` → `replace_lines` (lines 5–7) → `compile`: 0 errors → summary |
+
 ## Admin seed, password toggle, mail (2026-10-14)
 
 | Check | Result | Detail |
@@ -88,7 +99,8 @@ Checked with headless Chromium (Playwright) screenshots at 1440×900, and at 390
 
 * **Mail delivery not yet confirmed**: SMTP login to Brevo works; no real message has been sent.
 
-* **Agentic editing not yet verified** (gateway backend outage during testing). Key 1 is over budget.
+* The first gateway (Qwen3.5 via lambda-way) is unusable: key 1 over budget, vLLM backend down. The
+  current gateway passes everything, including agentic editing.
 * The browser UI (chat panel, diff approval) was exercised via its HTTP/stream protocol, not by clicking in a real browser.
 * **MCP server not available**: its module is in the source tree but not in the published
   `6.3.0` image (which is 44 commits behind upstream `5d3575b`). Using it would require

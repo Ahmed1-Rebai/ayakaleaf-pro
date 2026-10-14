@@ -8,8 +8,8 @@ entirely through environment variables. No code changes were needed or made.
 | Variable | Value used here | Notes |
 |---|---|---|
 | `AI_ENABLED` | `true` | Master switch (default off). |
-| `AI_BASE_URL` | `https://lambda-way.deslabcloud.com/v1` | Must include `/v1`; the SDK appends `/chat/completions`. |
-| `AI_MODEL` | `Qwen/Qwen3.5-122B-A10B-GPTQ-Int4` | Used by the chat and the Error Assistant. |
+| `AI_BASE_URL` | `http://10.110.150.21:30883/v1` | Lab LiteLLM gateway on the internal network. Must include `/v1`; the SDK appends `/chat/completions`. |
+| `AI_MODEL` | `groq/openai/gpt-oss-120b` | Used by the chat and the Error Assistant (served by Groq through LiteLLM). |
 | `AI_API_KEY` | *(secret)* | Sent as `Authorization: Bearer …`. |
 | `AI_IMAGE_MODEL` | unset | Optional model for chats that contain images. |
 | `AI_MAX_STEPS` | unset (20) | Tool calls per user message. |
@@ -42,7 +42,7 @@ The app uses Vercel AI SDK `ai@6` with `@ai-sdk/openai-compatible@2.0.42`. Every
 | Multi-turn tool results (`role: tool`) | required for agentic loops | not used |
 | Usage in final chunk | used for token quotas | used for token quotas |
 
-A vLLM-served Qwen model only returns structured `tool_calls` if the server was started
+A self-hosted vLLM model only returns structured `tool_calls` if the server was started
 with `--enable-auto-tool-choice` and a matching `--tool-call-parser`. Gateway-side
 configuration decides this, so it has to be tested: OpenAI compatibility alone does not
 guarantee it.
@@ -62,34 +62,33 @@ guarantee it.
 
 ## Verified capabilities (2026-10-14)
 
-Tested with the second key (the first key was rejected with `429 budget_exceeded`: it
-had spent $10.11 of its $10.00 budget).
+Current gateway: LiteLLM at `http://10.110.150.21:30883/v1`, model `groq/openai/gpt-oss-120b`.
 
 | Capability | Status | Evidence |
 |---|---|---|
 | Config reaches container | ✅ verified | `AI_*` present in `sharelatex`; key length checked, never printed |
 | Editor shows AI features | ✅ verified | `aiAvailable: true`; `/workbench/access` → `{"allowed":true,"errorAssistant":true}` |
-| Auth + `/models` | ✅ verified | 200, configured model listed; a bogus key → 401 |
-| Chat completion | ✅ verified | 3.8 s; returns `reasoning_content` plus the answer |
-| Streaming (SSE + `include_usage`) | ✅ verified | 236 chunks, usage in the final chunk |
+| Auth + `/models` | ✅ verified | 200, configured model listed (3 models); a bogus key → 401 |
+| Chat completion | ✅ verified | 0.3 s; `GATEWAY-OK`, 30 reasoning tokens |
+| Streaming (SSE + `include_usage`) | ✅ verified | 33 chunks, usage in the final chunk |
 | Tool calling (non-stream and **streamed** `tool_calls`) | ✅ verified | `finish_reason=tool_calls`, valid JSON arguments |
 | Tool-result round-trip (`role: tool`) | ✅ verified | model continues correctly after a tool result |
-| Chat via app (`/workbench/tex-gpt`) | ✅ verified | AI SDK UI stream: reasoning → text; 3.6 s |
-| LaTeX generation | ✅ verified | generated `tabular` compiled with 0 LaTeX errors |
-| Compile-error assistance (`/suggest-fix`) | ✅ verified | for `Environment itemiz undefined` it proposed line 5 `\begin{itemiz}` → `\begin{itemize}` (2.5 s); fix applied and recompiled |
-| Agentic editing (multi-step tool loop) | ⚠️ **not yet verified** | test written (`deploy/tests/ai_agentic_test.py`); gateway backend went down before it could run |
+| Compile-error assistance (`/suggest-fix`) | ✅ verified | `Environment itemiz undefined` → line 5 `\begin{itemiz}` → `\begin{itemize}` (0.7 s) |
+| Chat via app + LaTeX generation (`/workbench/tex-gpt`) | ✅ verified | reasoning → text stream; correct `tabular` (1.4 s) |
+| Agentic editing (multi-step tool loop) | ✅ verified | `read_current_file` → one `replace_lines` fixing lines 5–7 (`existingContent` exact) → `compile` → 0 errors → summary |
 | Graceful failure | ✅ verified | gateway errors (429 budget, 500 backend down) → client gets a generic message; details only in server logs |
 
 Observations:
-* **Reasoning model.** Qwen3.5 thinks before answering: 285 of 293 completion tokens were
-  reasoning in a trivial chat. The AI SDK streams it as `reasoning-*` events. Expect higher
-  token usage; consider `AI_TOKEN_QUOTA`.
+* **Light reasoning.** gpt-oss-120b reasons briefly (22–30 reasoning tokens on simple requests)
+  and answers in well under 2 s, so the AI features feel immediate.
 * **Error Assistant is one-error, one-line.** A typo on two lines (`\begin{itemiz}` and
   `\end{itemiz}`) needs two "Suggest fix" rounds. That's by design (a single
-  `suggestLineChange`, `stopWhen: stepCountIs(1)`).
-* **Gateway availability.** During testing the gateway's vLLM backend became unreachable
-  (`HTTP 500 … Cannot connect to host vllm-svc-coding:8001`) while `/models` still
-  returned 200. Use a real chat call, not `/models`, as a health check.
+  `suggestLineChange`, `stopWhen: stepCountIs(1)`). The chat agent fixes both in one edit.
+* **History.** The first gateway (`https://lambda-way.deslabcloud.com/v1`, Qwen3.5-122B on
+  self-hosted vLLM) passed the same direct tests, but its key hit its budget and its vLLM
+  backend went down (`HTTP 500 … Cannot connect to host vllm-svc-coding:8001`) while
+  `/models` still returned 200. Use a real chat call, not `/models`, as a health check. Its
+  settings are kept as comments in `.env`.
 
 Re-run at any time:
 

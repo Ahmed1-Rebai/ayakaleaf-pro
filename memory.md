@@ -2,8 +2,8 @@
 
 ## Context
 - Goal: self-hosted Ayakaleaf Pro (Overleaf CE + Pro features, AGPL-3.0), branded LambdaTeX,
-  wired to the lab's OpenAI-compatible LLM gateway `https://lambda-way.deslabcloud.com/v1`,
-  model `Qwen/Qwen3.5-122B-A10B-GPTQ-Int4`.
+  wired to the lab's LiteLLM gateway `http://10.110.150.21:30883/v1`, model
+  `groq/openai/gpt-oss-120b` (previous gateway lambda-way/Qwen3.5 kept commented in `.env`).
 - **Repository of record**: GitLab `gitkube.deslabcloud.com/ahmed_rebaii/lambdatex` (project 83),
   cloned at `~/lambdatex`. Deployment-only (no application source; the app runs from the
   published image). Remote `gitlab` over HTTPS; a repo-local credential helper reads
@@ -55,16 +55,17 @@
 
 ## Status (2026-10-14)
 - Platform: create/save/compile/PDF/zip export/persistence/isolation all PASS.
-- AI key 1: `429 budget_exceeded` ($10.11 of $10.00). User switched to key 2 in `.env`.
-- AI key 2: gateway auth/chat/stream/tools/stream-tools/round-trip PASS; app Error Assistant
-  and chat LaTeX generation PASS. Agentic loop test (`deploy/tests/ai_agentic_test.py`)
-  NOT RUN: the gateway's vLLM backend (`vllm-svc-coding:8001`) went down (HTTP 500).
+- AI (current: LiteLLM `10.110.150.21:30883`, `groq/openai/gpt-oss-120b`): direct
+  auth/chat/stream/tools/stream-tools/round-trip PASS; via app Error Assistant, chat LaTeX
+  generation and the agentic loop (read → replace_lines → compile) PASS.
+- Earlier gateway (lambda-way, Qwen3.5): key 1 over budget, vLLM backend later down (HTTP 500).
+- Mail: Brevo login verified; real delivery not yet confirmed.
+- The account `admin@lambdalab.org` has one user project (`aa`); test fixtures are deleted
+  after each test run.
 
 ## Next steps
-1. When the gateway backend is back (a real chat call returns 200), run
-   `python3 deploy/tests/ai_agentic_test.py` and a second Error Assistant round.
-2. After any `.env` change: `cd ~/ayakaleaf-toolkit && bin/docker-compose up -d sharelatex`.
-3. Test chat agentic editing in a browser (approve a `replace_lines` diff).
-4. Update `docs/LLM_INTEGRATION.md` and `docs/TESTING.md` with the real results.
-5. Optional: set `AI_TOKEN_QUOTA` per user; TLS proxy for non-local access; sync the fork
-   (`git fetch upstream && git merge upstream/server-pro`).
+1. After any `.env` change: `cd ~/ayakaleaf-toolkit && bin/docker-compose up -d sharelatex`,
+   then `python3 deploy/tests/gateway_test.py` (delete test projects after the app tests).
+2. Replace GitLab `main` with `main-clean` (user step: force-push or switch default branch).
+3. Confirm a real Brevo delivery (e.g. "Forgot your password?").
+4. Optional: `AI_TOKEN_QUOTA` per user; TLS proxy for non-local access; disable GitLab Auto DevOps.
