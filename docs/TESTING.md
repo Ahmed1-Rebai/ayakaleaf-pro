@@ -78,13 +78,15 @@ Checked with headless Chromium (Playwright) screenshots at 1440×900, and at 390
 | Platform E2E using `.env` credentials | ✅ PASS | login, create, compile, save, recompile, export |
 | Password toggle (Playwright) | ✅ PASS | icon `lucide lucide-eye h-4 w-4` → click → `type=text`, `lucide-eye-off`, `aria-pressed=true` → click → `password`; no CSP violations |
 | Script nonce equals the CSP header nonce | ✅ PASS | checked on `/login` |
-| Mail settings resolved in Overleaf | ✅ PASS | from `Lambda Research Lab <contact@lambdalab.org>`, `host.docker.internal:25`, no TLS, no auth |
-| SMTP relay reachable | ❌ FAIL | `ECONNREFUSED 172.17.0.1:25`: nothing listens on port 25 on this VM |
-| "Forgot your password?" with mail on | ❌ FAIL (expected without a relay) | HTTP 500, log `ECONNREFUSED`; no mail could leave the host |
+| First mail config (`host.docker.internal:25`) | ❌ FAIL | `ECONNREFUSED 172.17.0.1:25`: no relay on this VM; "Forgot your password?" returned 500. Replaced by Brevo |
+| Mail settings resolved in Overleaf (Brevo) | ✅ PASS | from `Lambda Research Lab <contact@lambdalab.org>`, `smtp-relay.brevo.com:587`, STARTTLS, auth set |
+| Brevo reachable, STARTTLS offered | ✅ PASS | EHLO lists `STARTTLS`, AUTH `PLAIN LOGIN CRAM-MD5` |
+| SMTP login (`nodemailer.verify()`: connect + STARTTLS + AUTH, no message) | ✅ PASS | credentials accepted |
+| Real message delivery | ⚠️ NOT RUN | needs an actual send; the sender must be verified in Brevo |
 
 ## Known limitations
 
-* **Mail does not deliver yet**: `EMAIL__HOST=host.docker.internal:25` has no SMTP server on this VM.
+* **Mail delivery not yet confirmed**: SMTP login to Brevo works; no real message has been sent.
 
 * **Agentic editing not yet verified** (gateway backend outage during testing). Key 1 is over budget.
 * The browser UI (chat panel, diff approval) was exercised via its HTTP/stream protocol, not by clicking in a real browser.

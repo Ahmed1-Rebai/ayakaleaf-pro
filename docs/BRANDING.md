@@ -53,5 +53,5 @@ The theme works by:
 * Selectors target upstream markup and CSS variables of image `6.3.0`. After an upgrade,
   check the login page, dashboard (light and dark), editor and password reset.
 * The Safari pinned-tab icon (`mask-favicon.svg`) is monochrome by design.
-* `/register` shows `OVERLEAF_ADMIN_EMAIL` (set from `EMAIL__REPLY_TO` in `.env`) as the contact.
+* `/register` shows `OVERLEAF_ADMIN_EMAIL` (set from `Email__FromAddress` in `.env`) as the contact.
 * Inter is SIL OFL 1.1 (`lambdatex/Inter-LICENSE.txt`). The Lucide icon paths are ISC.

@@ -11,9 +11,6 @@ services:
       - /home/user/ayakaleaf-pro/.env
       # LambdaTeX branding (no secrets)
       - /home/user/ayakaleaf-pro/deploy/branding/branding.env
-    # EMAIL__HOST=host.docker.internal: Linux needs this mapping to the host gateway
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     volumes:
       # LambdaTeX theme: assets, stylesheet injection, replacement icons
       - /home/user/ayakaleaf-pro/deploy/branding/lambdatex:/overleaf/services/web/public/img/lambdatex:ro

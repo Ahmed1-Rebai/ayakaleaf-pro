@@ -128,10 +128,10 @@ deploy/scripts/seed-admin.sh --replace old@example.org   # rename an existing ac
 The script reads `.env` on the host and passes the values to the container over stdin, so
 they never appear in process arguments. Passwords go through Overleaf's normal policy checks.
 
-Mail uses the `EMAIL__*` block in `.env`, which is mapped onto Overleaf's
-`OVERLEAF_EMAIL_*` variables in the same file (see `.env.example`). Apply changes with
-`bin/docker-compose up -d sharelatex`. A reachable SMTP relay is required: with mail
-enabled and no relay, flows that send mail (for example "Forgot your password?") fail.
+Mail uses the `Email__*` block in `.env` (Brevo SMTP relay, port 587 with STARTTLS), which is
+mapped onto Overleaf's `OVERLEAF_EMAIL_*` variables in the same file (see `.env.example`). Apply changes with
+`bin/docker-compose up -d sharelatex`. With mail enabled, flows that send mail (for example "Forgot your password?") fail if the relay is
+unreachable or rejects the login. The sender address must be verified in the Brevo account.
 
 ### Usage
 
@@ -151,7 +151,7 @@ the user must approve.
 | `403 ai_access_denied` | An admin disabled AI for that user (`aiFeatures.enabled=false`). |
 | Compile fails with Docker errors | Docker socket must be mounted (`SIBLING_CONTAINERS_ENABLED=true`) and the TeX Live image present locally. |
 | Page not reachable from other machines (`ERR_CONNECTION_REFUSED`) | Check `docker port sharelatex`: `127.0.0.1:8001` means it is bound to loopback only. Set `OVERLEAF_LISTEN_IP=0.0.0.0`, then `bin/docker-compose up -d sharelatex`. A timeout instead of a refusal points to a network firewall. |
-| "Forgot your password?" → *Something went wrong* (500) | The SMTP relay is unreachable: `bin/logs web \| grep ECONNREFUSED`. Point `EMAIL__HOST`/`EMAIL__PORT` at a reachable relay, or comment out `OVERLEAF_EMAIL_FROM_ADDRESS` to turn mail off. |
+| "Forgot your password?" → *Something went wrong* (500) | The SMTP relay is unreachable: `bin/logs web \| grep ECONNREFUSED`. Check `Email__Host`/`Email__Port` and the credentials, or comment out `OVERLEAF_EMAIL_FROM_ADDRESS` to turn mail off. |
 | `seed-admin.sh` fails with `contains_email` / `too_similar` | Overleaf rejects passwords that contain or resemble the email address; choose another. |
 | Port already in use | Change `OVERLEAF_PORT` in `config/overleaf.rc` (this deployment uses 8001), then `bin/docker-compose up -d sharelatex`. |
 

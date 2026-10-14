@@ -32,12 +32,12 @@
   `docker exec sharelatex nginx -s reload`.
 
 ## Mail
-- `.env` holds the user's `EMAIL__*` block plus `OVERLEAF_EMAIL_*` lines that interpolate it
-  (compose expands `${EMAIL__…}` in env files). `extra_hosts: host.docker.internal:host-gateway`
-  is in the override.
-- No SMTP relay listens on port 25 on this VM, so delivery fails (`ECONNREFUSED`) and
-  "Forgot your password?" returns 500 until `EMAIL__HOST` points at a real relay.
-- SMTP_USER/PASS are left undefined: Overleaf enables AUTH when they are defined, even empty.
+- `.env` holds the user's `Email__*` block (Brevo: smtp-relay.brevo.com:587, STARTTLS, login)
+  plus `OVERLEAF_EMAIL_*` lines that interpolate it (compose expands `${Email__…}` in env files).
+- Verified: STARTTLS offered and the SMTP login accepted (`nodemailer.verify()`, nothing sent).
+  Not verified: real delivery. The sender `contact@lambdalab.org` must be verified in Brevo.
+- Overleaf passes no `requireTLS` to nodemailer, so STARTTLS is opportunistic; port 465 with
+  `OVERLEAF_EMAIL_SMTP_SECURE=true` would enforce TLS.
 
 ## Gotchas
 - `bin/up` pulls the TeX Live image before starting. Use `SIBLING_CONTAINERS_PULL=false bin/up -d`
