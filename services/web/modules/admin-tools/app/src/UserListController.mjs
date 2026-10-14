@@ -18,6 +18,8 @@ import UserUpdater from '../../../../app/src/Features/User/UserUpdater.mjs'
 import UserDeleter from '../../../../app/src/Features/User/UserDeleter.mjs'
 import UserSettingsHelper from '../../../../app/src/Features/Project/UserSettingsHelper.mjs'
 import ProjectDeleter from '../../../../app/src/Features/Project/ProjectDeleter.mjs'
+import ProjectGetter from '../../../../app/src/Features/Project/ProjectGetter.mjs'
+import EditorRealTimeController from '../../../../app/src/Features/Editor/EditorRealTimeController.mjs'
 import OwnershipTransferHandler from '../../../../app/src/Features/Collaborators/OwnershipTransferHandler.mjs'
 import HttpErrorHandler from '../../../../app/src/Features/Errors/HttpErrorHandler.mjs'
 import ErrorController from '../../../../app/src/Features/Errors/ErrorController.mjs'
@@ -690,6 +692,8 @@ async function updateUser(req, res, next) {
 
     const newValue = typeof value === 'string' ? value.trim() : value
     if (newValue === user[key]) continue
+    // Suspended below, which also ends the sessions of the user
+    if (key === 'suspended' && newValue === true) continue
 
     update[key] = newValue
   }
@@ -699,6 +703,19 @@ async function updateUser(req, res, next) {
     await user.save()
   } catch {
     throw new OError('problem updating user settings', { userId })
+  }
+
+  if (updatesInput.suspended === true && user.suspended !== true) {
+    await UserUpdater.promises.suspendUser(userId, {
+      initiatorId: actorUserId,
+      ip: req.ip,
+    })
+    // Close the editors the user has open, as when removed from a project
+    const projects = await ProjectGetter.promises.findAllUsersProjects(userId, '_id')
+    for (const project of Object.values(projects).flat()) {
+      EditorRealTimeController.emitToRoom(project._id, 'userRemovedFromProject', userId)
+    }
+    update.suspended = true
   }
 
   if (userId == actorUserId) {

@@ -9,6 +9,7 @@ import {
   setAuthentikName,
   ssoLogin,
 } from '../../../../helpers/auth'
+import { setSuspended } from '../../../../helpers/adminTools'
 import { postWithCsrf } from '../../../../helpers/request'
 
 // SAML login against authentik (services/authentik). Admins are mapped from
@@ -148,5 +149,21 @@ describe('SAML profile and logout', function () {
     cy.get('a[href="/saml/login"]').click()
     authentikLogin('alice')
     cy.url({ timeout: 30_000 }).should('contain', '/project')
+  })
+})
+
+describe('SAML login of a disabled account', function () {
+  it('sends the user to the account suspended page until enabled again', function () {
+    samlLogin('dave')
+    samlLogin('carol')
+    setSuspended(idpEmail('dave'), true)
+    ssoLogin('/saml/login', 'dave', '/account-suspended')
+    cy.visit('/project')
+    cy.url().should('contain', '/login')
+
+    samlLogin('carol')
+    setSuspended(idpEmail('dave'), false)
+    samlLogin('dave')
+    currentUser().its('email').should('equal', idpEmail('dave'))
   })
 })

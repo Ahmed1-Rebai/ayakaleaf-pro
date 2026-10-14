@@ -1,7 +1,8 @@
 import { v4 as uuid } from 'uuid'
+import { adminUserInfo, setSuspended } from '../../../helpers/adminTools'
 import { login } from '../../../helpers/login'
 import { postWithCsrf, requestWithCsrf } from '../../../helpers/request'
-import { ensureUserExists } from '../../../helpers/users'
+import { ADMIN_EMAIL, ensureUserExists } from '../../../helpers/users'
 
 // oauth2-server module: the personal access tokens ("Git authentication
 // tokens") of the account settings, and /oauth/token/info, the public API
@@ -367,5 +368,53 @@ describe('personal access token API', function () {
     visitSettings()
     deleteToken('000000000000000000000000').its('status').should('equal', 404)
     deleteToken('not-an-id').its('status').should('equal', 404)
+  })
+})
+
+describe('tokens of disabled and deleted accounts', function () {
+  // A new user with a token that git-bridge accepts
+  function userWithToken(email: string): Cypress.Chainable<string> {
+    ensureUserExists(email)
+    login(email)
+    visitSettings()
+    return createToken().then(token => {
+      cy.clearAllCookies()
+      return tokenInfo(`Bearer ${token}`)
+        .its('status')
+        .should('equal', 200)
+        .then(() => token)
+    })
+  }
+
+  it('refuses the tokens while the account is disabled', function () {
+    const email = `disabled-${uuid()}@example.com`
+    userWithToken(email).then(token => {
+      login(ADMIN_EMAIL)
+      setSuspended(email, true)
+      cy.clearAllCookies()
+      tokenInfo(`Bearer ${token}`).its('status').should('equal', 401)
+
+      login(ADMIN_EMAIL)
+      setSuspended(email, false)
+      cy.clearAllCookies()
+      tokenInfo(`Bearer ${token}`).its('status').should('equal', 200)
+    })
+  })
+
+  it('refuses the tokens of a deleted account', function () {
+    const email = `deleted-${uuid()}@example.com`
+    userWithToken(email).then(token => {
+      login(ADMIN_EMAIL)
+      adminUserInfo(email).then(user => {
+        postWithCsrf(`/admin/user/${user.id}/delete`, {
+          sendEmail: false,
+          toUserId: null,
+        })
+          .its('status')
+          .should('equal', 200)
+      })
+      cy.clearAllCookies()
+      tokenInfo(`Bearer ${token}`).its('status').should('equal', 401)
+    })
   })
 })

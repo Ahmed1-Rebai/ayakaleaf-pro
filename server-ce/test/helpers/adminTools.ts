@@ -44,6 +44,16 @@ export function adminUserInfo(email: string) {
   )
 }
 
+// Suspends or resumes the user like the suspend and resume buttons of the
+// list. Expects to be logged in as admin.
+export function setSuspended(email: string, suspended: boolean) {
+  adminUserInfo(email).then(user => {
+    postWithCsrf(`/admin/user/${user.id}/update`, { suspended })
+      .its('status')
+      .should('equal', 200)
+  })
+}
+
 // Posts the login form like the login page does, without keeping the
 // session. Answers {redir} where the page would go next, or 401.
 export function tryLogin(email: string, password = DEFAULT_PASSWORD) {

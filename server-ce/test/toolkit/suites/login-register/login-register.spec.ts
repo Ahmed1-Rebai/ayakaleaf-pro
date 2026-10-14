@@ -1,13 +1,23 @@
 import { v4 as uuid } from 'uuid'
+import { setSuspended } from '../../../helpers/adminTools'
 import { DEFAULT_PASSWORD, login } from '../../../helpers/login'
 import { postRegister, waitForRegisterSlot } from '../../../helpers/register'
 import { postWithCsrf } from '../../../helpers/request'
-import { ensureUserExists } from '../../../helpers/users'
+import { ADMIN_EMAIL, ensureUserExists } from '../../../helpers/users'
 
 // login-register module with OVERLEAF_ALLOW_PUBLIC_REGISTRATION=true: anyone
 // can sign up with email and password. HaveIBeenPwned is enabled.
 
 const LOGIN_ERROR = /Your email or password is incorrect/
+
+// Registers the user and disables the account like the admin panel does.
+// Leaves the browser logged out.
+function ensureSuspendedUser(email: string) {
+  ensureUserExists(email)
+  login(ADMIN_EMAIL)
+  setSuspended(email, true)
+  cy.clearAllCookies()
+}
 
 describe('login', function () {
   const user = `user-${uuid()}@example.com`
@@ -54,6 +64,18 @@ describe('login', function () {
     cy.findByLabelText('Password').type(DEFAULT_PASSWORD)
     cy.findByRole('button', { name: 'Login' }).click()
     cy.findByText(LOGIN_ERROR)
+    cy.url().should('contain', '/login')
+  })
+
+  it('sends a disabled user to the account suspended page', function () {
+    const email = `suspended-${uuid()}@example.com`
+    ensureSuspendedUser(email)
+    cy.visit('/login')
+    cy.findByLabelText('Email').type(email)
+    cy.findByLabelText('Password').type(DEFAULT_PASSWORD)
+    cy.findByRole('button', { name: 'Login' }).click()
+    cy.url().should('contain', '/account-suspended')
+    cy.visit('/project')
     cy.url().should('contain', '/login')
   })
 
@@ -159,6 +181,14 @@ describe('register', function () {
         expect(response.status).to.equal(400)
       }
     )
+  })
+
+  it('rejects the email of a disabled account', function () {
+    const email = `suspended-${uuid()}@example.com`
+    ensureSuspendedUser(email)
+    postRegister({ email, password: DEFAULT_PASSWORD })
+      .its('status')
+      .should('equal', 400)
   })
 
   it('rejects a request without password', function () {

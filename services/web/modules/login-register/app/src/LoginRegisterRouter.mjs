@@ -63,6 +63,8 @@ export default {
 
     webRouter.get('/login', LoginController.loginPage)
     AuthenticationController.addEndpointToLoginWhitelist('/login')
+    // Where suspended users are sent on login, they have no session
+    AuthenticationController.addEndpointToLoginWhitelist('/account-suspended')
 
     if (Settings.ldap && Settings.ldap.enable) {
       webRouter.get('/ldap/login', LoginController.ldapLoginPage)

@@ -32,8 +32,13 @@ export function authentikLogin(username: string) {
   )
 }
 
-// Logs in through the IdP from /saml/login or /oidc/login.
-export function ssoLogin(path: '/saml/login' | '/oidc/login', username: string) {
+// Logs in through the IdP from /saml/login or /oidc/login, landing on
+// /project or the given page.
+export function ssoLogin(
+  path: '/saml/login' | '/oidc/login',
+  username: string,
+  landing = '/project'
+) {
   cy.clearAllCookies()
   // Use the button on the login page like a user. A cy.visit() of the SSO
   // route would make authentik the top origin, and the session cookie that
@@ -41,7 +46,7 @@ export function ssoLogin(path: '/saml/login' | '/oidc/login', username: string) 
   cy.visit('/login')
   cy.get(`a[href="${path}"]`).click()
   authentikLogin(username)
-  cy.url({ timeout: 30_000 }).should('contain', '/project')
+  cy.url({ timeout: 30_000 }).should('contain', landing)
 }
 
 export function ldapLogin(username: string, password?: string) {

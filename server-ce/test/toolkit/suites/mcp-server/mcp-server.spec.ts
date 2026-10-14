@@ -1,4 +1,5 @@
 import { v4 as uuid } from 'uuid'
+import { setSuspended } from '../../../helpers/adminTools'
 import {
   createGitToken,
   git,
@@ -19,7 +20,7 @@ import {
   openReviewPanel,
 } from '../../../helpers/review'
 import { shareProject, shareProjectByLink } from '../../../helpers/sharing'
-import { ensureUserExists } from '../../../helpers/users'
+import { ADMIN_EMAIL, ensureUserExists } from '../../../helpers/users'
 
 // The MCP server of a project (/project/:id/mcp), next to git-bridge: the
 // same personal access tokens authenticate MCP clients and git.
@@ -772,6 +773,35 @@ describe('MCP access after losing access to the project', function () {
 
           download(link).its('status').should('equal', 404)
           mcp(projectId, token, 'tools/list').its('status').should('equal', 403)
+        })
+      })
+    })
+  })
+})
+
+describe('MCP access of a disabled account', function () {
+  it('refuses the MCP server and the download links until enabled again', function () {
+    const member = `disabled-${uuid()}@example.com`
+    ensureUserExists(member)
+    let projectId: string
+    login(member)
+    createProject(projectName('Mcp disabled')).then(id => {
+      projectId = id
+    })
+    createGitToken().then(token => {
+      compile(projectId, token).then(build => {
+        outputFileLink(projectId, token, build).then(link => {
+          download(link).its('status').should('equal', 200)
+
+          login(ADMIN_EMAIL)
+          setSuspended(member, true)
+          mcp(projectId, token, 'tools/list').its('status').should('equal', 401)
+          download(link).its('status').should('equal', 404)
+
+          login(ADMIN_EMAIL)
+          setSuspended(member, false)
+          mcp(projectId, token, 'tools/list').its('status').should('equal', 200)
+          download(link).its('status').should('equal', 200)
         })
       })
     })

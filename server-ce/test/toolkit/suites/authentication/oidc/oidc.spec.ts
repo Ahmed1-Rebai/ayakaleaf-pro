@@ -10,6 +10,7 @@ import {
   ssoLogin,
 } from '../../../../helpers/auth'
 import { login } from '../../../../helpers/login'
+import { setSuspended } from '../../../../helpers/adminTools'
 import { postWithCsrf } from '../../../../helpers/request'
 
 // OIDC login against authentik (services/authentik). Admins are mapped from
@@ -162,5 +163,21 @@ describe('OIDC logout', function () {
     cy.get('a[href="/oidc/login"]').click()
     authentikLogin('alice')
     cy.url({ timeout: 30_000 }).should('contain', '/project')
+  })
+})
+
+describe('OIDC login of a disabled account', function () {
+  it('sends the user to the account suspended page until enabled again', function () {
+    oidcLogin('dave')
+    oidcLogin('carol')
+    setSuspended(idpEmail('dave'), true)
+    ssoLogin('/oidc/login', 'dave', '/account-suspended')
+    cy.visit('/project')
+    cy.url().should('contain', '/login')
+
+    oidcLogin('carol')
+    setSuspended(idpEmail('dave'), false)
+    oidcLogin('dave')
+    currentUser().its('email').should('equal', idpEmail('dave'))
   })
 })

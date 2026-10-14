@@ -1,4 +1,5 @@
 import { v4 as uuid } from 'uuid'
+import { setSuspended } from '../../../helpers/adminTools'
 import {
   createGitToken,
   git,
@@ -15,7 +16,7 @@ import {
 } from '../../../helpers/project'
 import { requestWithCsrf } from '../../../helpers/request'
 import { shareProject, shareProjectByLink } from '../../../helpers/sharing'
-import { ensureUserExists } from '../../../helpers/users'
+import { ADMIN_EMAIL, ensureUserExists } from '../../../helpers/users'
 
 // git-bridge module with the git-bridge container of the toolkit, built from
 // this checkout (services/git-bridge). Projects are cloned and pushed with
@@ -374,6 +375,37 @@ describe('git access to a project', function () {
       gitClone(projectId, token, workingCopy('deleted'))
         .its('exitCode')
         .should('not.equal', 0)
+    })
+  })
+})
+
+describe('git access of a disabled account', function () {
+  it('refuses clone and push until the account is enabled again', function () {
+    const member = `disabled-${uuid()}@example.com`
+    ensureUserExists(member)
+    let projectId: string
+    login(member)
+    createProject(projectName('Git disabled')).then(id => {
+      projectId = id
+    })
+    createGitToken().then(token => {
+      const dir = workingCopy('disabled')
+      gitClone(projectId, token, dir).its('exitCode').should('equal', 0)
+
+      login(ADMIN_EMAIL)
+      setSuspended(member, true)
+      gitClone(projectId, token, workingCopy('while-disabled'))
+        .its('exitCode')
+        .should('not.equal', 0)
+      gitCommitAndPush(dir, 'notes.tex', 'Disabled', 'While disabled')
+        .its('exitCode')
+        .should('not.equal', 0)
+
+      login(ADMIN_EMAIL)
+      setSuspended(member, false)
+      gitClone(projectId, token, workingCopy('enabled-again'))
+        .its('exitCode')
+        .should('equal', 0)
     })
   })
 })

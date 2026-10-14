@@ -1,6 +1,6 @@
 import { v4 as uuid } from 'uuid'
-import { activateUser, login } from '../../../helpers/login'
-import { createProject, projectName } from '../../../helpers/project'
+import { activateUser, DEFAULT_PASSWORD, login } from '../../../helpers/login'
+import { createProject, openProject, projectName } from '../../../helpers/project'
 import {
   adminUserInfo,
   dialog,
@@ -10,6 +10,7 @@ import {
   search as searchUsers,
   searchBox,
   selectNewOwner,
+  setSuspended,
   tryLogin,
 } from '../../../helpers/adminTools'
 import { postWithCsrf } from '../../../helpers/request'
@@ -430,6 +431,74 @@ describe('disabling accounts', function () {
     userRow(email).should('not.exist')
 
     tryLogin(email).its('body.redir').should('equal', '/project')
+  })
+
+  it('logs a user out when disabling the account', function () {
+    const email = `admin-tools-suspend-session-${uuid()}@example.com`
+    ensureUserExists(email)
+    login(email)
+    cy.getCookie('overleaf.sid').then(cookie => {
+      login(ADMIN_EMAIL)
+      setSuspended(email, true)
+
+      // The session the user had before is gone
+      cy.clearAllCookies()
+      cy.setCookie('overleaf.sid', cookie!.value)
+      cy.visit('/project')
+      cy.url().should('contain', '/login')
+    })
+  })
+
+  it('closes the editor a user has open when disabling the account', function () {
+    const email = `admin-tools-suspend-editor-${uuid()}@example.com`
+    ensureUserExists(email)
+    login(ADMIN_EMAIL)
+    adminUserInfo(email).its('id').as('userId', { type: 'static' })
+    cy.getCookie('overleaf.sid').its('value').as('adminSid', { type: 'static' })
+
+    login(email)
+    createProject(projectName('Suspended editor')).then(openProject)
+
+    // Disable the account as admin, from the open editor: switching the
+    // cookie leaves its websocket connected
+    cy.get<string>('@adminSid').then(adminSid => {
+      cy.clearAllCookies()
+      cy.setCookie('overleaf.sid', adminSid)
+    })
+    cy.request('/admin/user').then(response => {
+      const csrfToken = response.body.match(
+        /name="ol-csrfToken" content="([^"]+)"/
+      )[1]
+      cy.get<string>('@userId').then(userId => {
+        cy.request({
+          method: 'POST',
+          url: `/admin/user/${userId}/update`,
+          body: { suspended: true },
+          headers: { 'X-Csrf-Token': csrfToken },
+        })
+      })
+    })
+    cy.clearAllCookies()
+
+    dialog().should('contain', 'Removed from project')
+    // Off to the dashboard, which asks for a login again
+    cy.url({ timeout: 15_000 }).should('contain', '/login')
+  })
+
+  it('keeps a disabled user out when activating the account', function () {
+    const email = `admin-tools-suspend-activate-${uuid()}@example.com`
+    login(ADMIN_EMAIL)
+    cy.visit('/admin/register')
+    postWithCsrf('/admin/register', { email }).then(response => {
+      expect(response.status).to.equal(200)
+      setSuspended(email, true)
+
+      cy.clearAllCookies()
+      cy.visit(response.body.setNewPasswordUrl)
+      cy.get('input[name="password"]').type(DEFAULT_PASSWORD)
+      cy.findByRole('button', { name: 'Activate' }).click()
+      cy.url().should('contain', '/account-suspended')
+    })
   })
 
   it('disables and enables several selected users at once', function () {

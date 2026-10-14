@@ -16,8 +16,10 @@ export default class RecognitionClient {
           new Error(message.message || 'Unexpected recognition response')
         )
     }
-    this.fail = () =>
+    this.fail = event => {
+      event.preventDefault()
       this.destroy(new Error('Symbol recognition worker failed'))
+    }
     worker.addEventListener('message', this.receive)
     worker.addEventListener('error', this.fail)
   }
@@ -40,7 +42,6 @@ export default class RecognitionClient {
     if (this.destroyed) return
     this.destroyed = true
     this.worker.removeEventListener('message', this.receive)
-    this.worker.removeEventListener('error', this.fail)
     this.worker.terminate()
     for (const request of this.pending.values()) {
       clearTimeout(request.timeout)

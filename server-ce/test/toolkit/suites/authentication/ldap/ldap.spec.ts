@@ -7,6 +7,7 @@ import {
   setAuthentikGroup,
   setAuthentikName,
 } from '../../../../helpers/auth'
+import { setSuspended } from '../../../../helpers/adminTools'
 import { postWithCsrf } from '../../../../helpers/request'
 
 // LDAP login through authentik's LDAP outpost (services/authentik). Admins
@@ -127,5 +128,22 @@ describe('LDAP profile and logout', function () {
     cy.url().should('contain', '/login')
     loginAs('bob')
     currentUser().its('email').should('equal', idpEmail('bob'))
+  })
+})
+
+describe('LDAP login of a disabled account', function () {
+  it('sends the user to the account suspended page until enabled again', function () {
+    loginAs('dave')
+    loginAs('carol')
+    setSuspended(idpEmail('dave'), true)
+    ldapLogin('dave')
+    cy.url().should('contain', '/account-suspended')
+    cy.visit('/project')
+    cy.url().should('contain', '/login')
+
+    loginAs('carol')
+    setSuspended(idpEmail('dave'), false)
+    loginAs('dave')
+    currentUser().its('email').should('equal', idpEmail('dave'))
   })
 })
