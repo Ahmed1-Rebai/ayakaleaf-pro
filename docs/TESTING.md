@@ -53,6 +53,21 @@ results are below.
 | Agentic editing (`deploy/tests/ai_agentic_test.py`) | ⚠️ NOT RUN | same gateway outage |
 | Gateway errors surfaced safely | ✅ PASS | 429 and 500 → generic client message; the SDK retries 3 times; details in `bin/logs web` |
 
+## Branding (LambdaTeX theme)
+
+Checked with headless Chromium (Playwright) screenshots at 1440×900, and at 390×844 for the login page.
+
+| Check | Result |
+|---|---|
+| Theme stylesheet injected and served (`/img/lambdatex/lambdatex.css`) | ✅ |
+| `nginx -t` with the branding snippet | ✅ |
+| Login, password reset, account settings, admin, dashboard, editor (light) | ✅ visually reviewed |
+| Dashboard and editor in dark theme | ✅ after fixing a contrast bug in the first version |
+| Editor loading screen shows the LambdaTeX mark | ✅ |
+| Favicons, status icons, manifest replaced (200, correct MIME) | ✅ |
+| Phone width login: no horizontal overflow | ✅ |
+| Platform E2E (login, create, compile, save, export) after rebranding | ✅ PASS |
+
 ## Known limitations
 
 * **Agentic editing not yet verified** (gateway backend outage during testing). Key 1 is over budget.

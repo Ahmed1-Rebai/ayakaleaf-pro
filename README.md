@@ -73,6 +73,8 @@ Details: [docs/LLM_INTEGRATION.md](docs/LLM_INTEGRATION.md), [docs/TESTING.md](d
 sibling containers. The repository's own root `docker-compose.yml` is the stock Overleaf CE
 example (`sharelatex/sharelatex`) and is **not** used.
 
+**Branding:** the instance is themed as **LambdaTeX** with the LAMBDA Lab's logo, colors and font, using config and mounted files only. See [docs/BRANDING.md](docs/BRANDING.md).
+
 ### Setup
 
 Requirements: Docker + Compose v2, ~35 GB free disk (the TeX Live image alone is ~29 GB), 4 GB+ RAM.

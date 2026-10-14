@@ -1,0 +1,51 @@
+# LambdaTeX branding
+
+The deployment is rebranded as **LambdaTeX** for the LAMBDA Lab (Laboratory of Advanced
+Modeling, Big Data and AI). The palette, type and logo come from the lab's website:
+deep navy with electric blue, Inter, and the 3D lambda mark. The upstream image is
+unchanged. Everything is configuration plus files mounted read-only.
+
+## How it works
+
+| Piece | File | Mechanism |
+|---|---|---|
+| Name, nav title, header logos, footers | `deploy/branding/branding.env` | Upstream env vars (`OVERLEAF_APP_NAME`, `OVERLEAF_NAV_TITLE`, `OVERLEAF_HEADER_IMAGE_URL[_LIGHT/_DARK]`, `OVERLEAF_LEFT/RIGHT_FOOTER`) |
+| Theme | `deploy/branding/lambdatex/lambdatex.css` | nginx `sub_filter` adds one `<link>` before `</head>` on every HTML page (`deploy/branding/nginx/`, mounted at `/etc/nginx/conf.d/`) |
+| Assets (marks, Inter, icons) | `deploy/branding/lambdatex/` | Mounted at `/overleaf/services/web/public/img/lambdatex/` and served as `/img/lambdatex/…` |
+| Favicons, compile-status icons, web manifest | same folder | Mounted over the upstream files in `public/` |
+| Overleaf "O" logo (password reset, error pages) | `lambda-logo.svg` | Mounted over `public/img/ol-brand/overleaf-o.svg` and `overleaf-o-dark.svg` |
+
+All mounts and the env file are listed in `deploy/toolkit-override.example.yml`, which is
+installed as `<toolkit>/config/docker-compose.override.yml`.
+
+The theme works by:
+* remapping Overleaf's `--green-*` accent scale to the lab's blues and its `--neutral-*`
+  greys to cool slate. Success states (notifications) stay green.
+* overriding the Bootstrap rules that have green compiled in (primary and outline
+  buttons, checkboxes, dropdowns, pills).
+* setting Inter for body, headings and buttons, and theme tokens for light and dark
+  (Overleaf's dark theme is `body[data-theme="default"]`).
+* styling the sign-in, registration and reset pages: glass card, 3D mark, glow and dot grid.
+  The dashboard gets the lab mark instead of "Digital Science", and the editor gets the mark
+  in its toolbar and loading screen.
+
+## Changing it
+
+* **CSS:** edit `lambdatex.css`, bump `?v=N` in `nginx/lambdatex-branding.conf`, then run
+  `docker exec sharelatex nginx -s reload`. `/img/` is cached for a year, so the version
+  bump is what makes browsers refetch.
+* **Env or mounts:** `cd ~/ayakaleaf-toolkit && bin/docker-compose up -d sharelatex`.
+* **Logos:** regenerate with `deploy/branding/tools/` (see its README), then recreate the
+  container. Favicons are single-file mounts, so an in-place edit is not picked up until
+  the container is recreated.
+* **Disable:** remove the `branding.env` line and the `volumes:` block from the override,
+  then recreate the container.
+
+## Caveats
+
+* Selectors target upstream markup and CSS variables of image `6.3.0`. After an upgrade,
+  check the login page, dashboard (light and dark), editor and password reset.
+* The Safari pinned-tab icon (`mask-favicon.svg`) is monochrome by design.
+* `OVERLEAF_ADMIN_EMAIL` is unset, so `/register` says "contact placeholder@example.com".
+  Set it to the lab's contact address.
+* Inter is SIL OFL 1.1 (`lambdatex/Inter-LICENSE.txt`).

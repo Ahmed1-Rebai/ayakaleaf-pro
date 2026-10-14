@@ -1,10 +1,29 @@
 # Copy to <toolkit>/config/docker-compose.override.yml (the toolkit auto-loads that name).
-# All AI_* settings, including the secret AI_API_KEY, live in ONE file: the
-# git-ignored, chmod-600 .env at the root of this repository (template: .env.example).
-# Adjust the absolute path to where you cloned the repository.
+# All AI_* settings, including the secret AI_API_KEY, live in ONE file: the git-ignored,
+# chmod-600 .env at the root of this repository (template: .env.example).
+# Paths assume the repository is cloned at /home/user/ayakaleaf-pro; adjust if not.
 ---
 services:
   sharelatex:
     env_file:
       - ../config/variables.env
+      # Single source for AI_* settings incl. the API key (chmod 600, git-ignored)
       - /home/user/ayakaleaf-pro/.env
+      # LambdaTeX branding (no secrets)
+      - /home/user/ayakaleaf-pro/deploy/branding/branding.env
+    volumes:
+      # LambdaTeX theme: assets, stylesheet injection, replacement icons
+      - /home/user/ayakaleaf-pro/deploy/branding/lambdatex:/overleaf/services/web/public/img/lambdatex:ro
+      - /home/user/ayakaleaf-pro/deploy/branding/nginx:/etc/nginx/conf.d:ro
+      - /home/user/ayakaleaf-pro/deploy/branding/lambdatex/favicon.ico:/overleaf/services/web/public/favicon.ico:ro
+      - /home/user/ayakaleaf-pro/deploy/branding/lambdatex/favicon.svg:/overleaf/services/web/public/favicon.svg:ro
+      - /home/user/ayakaleaf-pro/deploy/branding/lambdatex/favicon-16x16.png:/overleaf/services/web/public/favicon-16x16.png:ro
+      - /home/user/ayakaleaf-pro/deploy/branding/lambdatex/favicon-32x32.png:/overleaf/services/web/public/favicon-32x32.png:ro
+      - /home/user/ayakaleaf-pro/deploy/branding/lambdatex/apple-touch-icon.png:/overleaf/services/web/public/apple-touch-icon.png:ro
+      - /home/user/ayakaleaf-pro/deploy/branding/lambdatex/mask-favicon.svg:/overleaf/services/web/public/mask-favicon.svg:ro
+      - /home/user/ayakaleaf-pro/deploy/branding/lambdatex/web.sitemanifest.json:/overleaf/services/web/public/web.sitemanifest.json:ro
+      - /home/user/ayakaleaf-pro/deploy/branding/lambdatex/favicon-compiled.svg:/overleaf/services/web/public/favicon-compiled.svg:ro
+      - /home/user/ayakaleaf-pro/deploy/branding/lambdatex/favicon-compiling.svg:/overleaf/services/web/public/favicon-compiling.svg:ro
+      - /home/user/ayakaleaf-pro/deploy/branding/lambdatex/favicon-error.svg:/overleaf/services/web/public/favicon-error.svg:ro
+      - /home/user/ayakaleaf-pro/deploy/branding/lambdatex/lambda-logo.svg:/overleaf/services/web/public/img/ol-brand/overleaf-o-dark.svg:ro
+      - /home/user/ayakaleaf-pro/deploy/branding/lambdatex/lambda-logo.svg:/overleaf/services/web/public/img/ol-brand/overleaf-o.svg:ro

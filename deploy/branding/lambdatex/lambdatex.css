@@ -1,0 +1,621 @@
+/*
+ * LambdaTeX theme for Ayakaleaf Pro (LAMBDA Lab).
+ *
+ * Injected into every HTML page by nginx (deploy/branding/nginx/), on top of the
+ * unmodified upstream image. Palette, type and depth follow the LAMBDA website:
+ * deep navy + electric blue, Inter, glass surfaces and soft blue glows.
+ *
+ * Selectors are prefixed with `html` so they win over upstream rules of equal
+ * specificity, including CSS chunks the editor loads after this file.
+ */
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/img/lambdatex/InterVariable.woff2?v=1") format("woff2");
+}
+
+/* ---------------------------------------------------------------- palette */
+
+html:root {
+  --lt-brand: #037dfb;
+  --lt-brand-cyan: #06b6d4;
+  --lt-navy: #0a2a52;
+  --lt-ink: #0a0f1e;
+  --lt-accent: #2563eb;
+  --lt-accent-hover: #1d4ed8;
+  --lt-accent-active: #1e40af;
+  --lt-accent-subtle: rgba(37, 99, 235, 0.08);
+  --lt-bg: #fafbfc;
+  --lt-surface: #ffffff;
+  --lt-border: #e2e5ea;
+  --lt-text-2: #475569;
+  --lt-muted: #94a3b8;
+  --lt-shadow-card: 0 1px 2px rgba(10, 15, 30, 0.04), 0 12px 32px -18px rgba(10, 42, 82, 0.28);
+  --lt-glow: 0 10px 28px -12px rgba(37, 99, 235, 0.55);
+
+  /* Overleaf's accent scale is green; the lab's is blue. */
+  --green-10: #eff6ff;
+  --green-15: #e1edfe;
+  --green-20: #bfdbfe;
+  --green-30: #93c5fd;
+  --green-40: #60a5fa;
+  --green-50: #2563eb;
+  --green-60: #1d4ed8;
+  --green-65: #1e46c0;
+  --green-70: #1e40af;
+
+  /* Neutrals shifted to the lab's cool slate, with a navy cast in the darks. */
+  --neutral-05: #fafbfc;
+  --neutral-10: #f1f3f5;
+  --neutral-20: #e2e5ea;
+  --neutral-30: #cfd5de;
+  --neutral-40: #a9b2c1;
+  --neutral-50: #8590a2;
+  --neutral-60: #64748b;
+  --neutral-70: #475569;
+  --neutral-80: #283244;
+  --neutral-85: #1b2232;
+  --neutral-90: #0f1524;
+
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --bs-font-sans-serif: var(--font-sans);
+}
+
+html:root,
+html [data-bs-theme="light"] {
+  --bs-primary: #2563eb;
+  --bs-primary-rgb: 37, 99, 235;
+  --bs-primary-bg-subtle: #dbeafe;
+  --bs-primary-border-subtle: #bfdbfe;
+  --bs-primary-text-emphasis: #1e3a8a;
+  --bs-link-color: #1d4ed8;
+  --bs-link-color-rgb: 29, 78, 216;
+  --bs-link-hover-color: #1e40af;
+  --bs-link-hover-color-rgb: 30, 64, 175;
+  --bs-focus-ring-color: rgba(37, 99, 235, 0.25);
+}
+
+html [data-bs-theme="dark"] {
+  --bs-primary-bg-subtle: #0b1a3a;
+  --bs-primary-border-subtle: #1e3a8a;
+  --bs-primary-text-emphasis: #93c5fd;
+  --bs-link-color: #60a5fa;
+  --bs-link-color-rgb: 96, 165, 250;
+  --bs-link-hover-color: #93c5fd;
+  --bs-link-hover-color-rgb: 147, 197, 253;
+}
+
+/* ------------------------------------------- components with baked-in green */
+
+html .btn-primary,
+html .error-container .error-btn {
+  --bs-btn-bg: var(--lt-accent);
+  --bs-btn-border-color: var(--lt-accent);
+  --bs-btn-hover-bg: var(--lt-accent-hover);
+  --bs-btn-hover-border-color: var(--lt-accent-hover);
+  --bs-btn-active-bg: var(--lt-accent-active);
+  --bs-btn-active-border-color: var(--lt-accent-active);
+  --bs-btn-disabled-bg: var(--lt-accent);
+  --bs-btn-disabled-border-color: var(--lt-accent);
+  --bs-btn-focus-shadow-rgb: 37, 99, 235;
+}
+
+html .btn-outline-primary {
+  --bs-btn-color: var(--lt-accent);
+  --bs-btn-border-color: var(--lt-accent);
+  --bs-btn-hover-bg: var(--lt-accent);
+  --bs-btn-hover-border-color: var(--lt-accent);
+  --bs-btn-active-bg: var(--lt-accent-hover);
+  --bs-btn-active-border-color: var(--lt-accent-hover);
+  --bs-btn-disabled-color: var(--lt-accent);
+  --bs-btn-disabled-border-color: var(--lt-accent);
+}
+
+html .form-check-input:checked,
+html .form-check-input[type="checkbox"]:indeterminate {
+  background-color: var(--lt-accent);
+  border-color: var(--lt-accent);
+}
+
+html .form-range::-webkit-slider-thumb { background-color: var(--lt-accent); }
+html .form-range::-moz-range-thumb { background-color: var(--lt-accent); }
+html .dropdown-menu { --bs-dropdown-link-active-bg: var(--lt-accent); }
+html .nav-pills { --bs-nav-pills-link-active-bg: var(--lt-accent); }
+html .table { --bs-table-active-bg: var(--lt-accent-subtle); }
+
+html .list-group {
+  --bs-list-group-active-bg: var(--lt-accent);
+  --bs-list-group-active-border-color: var(--lt-accent);
+}
+
+html .toolbar .btn-full-height.active,
+html .toolbar .btn-full-height:active {
+  background-color: var(--lt-accent);
+}
+
+/* Success stays green: it is a state, not the brand accent. */
+html .notification-type-success {
+  --notification-bg-success: #ecfdf5;
+  --notification-border-success: #a7f3d0;
+  --notification-icon-success: #059669;
+}
+
+html [data-bs-theme="dark"] .notification-type-success,
+html [data-theme="default"] .notification-type-success {
+  --notification-bg-success: #052e22;
+  --notification-border-success: #047857;
+  --notification-icon-success: #34d399;
+}
+
+/* ----------------------------------------------------------- theme tokens */
+
+html body {
+  --lt-heading: #0a0f1e;
+  --lt-subtle-text: #475569;
+  --lt-page-bg: #fafbfc;
+  --lt-dot: rgba(10, 42, 82, 0.08);
+  --lt-glow-1: rgba(3, 125, 251, 0.14);
+  --lt-glow-2: rgba(6, 182, 212, 0.09);
+  --lt-card-bg: rgba(255, 255, 255, 0.84);
+  --lt-card-border: rgba(10, 42, 82, 0.08);
+  --lt-card-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 30px 70px -32px rgba(10, 42, 82, 0.4), 0 0 70px rgba(37, 99, 235, 0.1);
+  --lt-field-bg: #ffffff;
+  --lt-field-border: #e2e5ea;
+  --lt-nav-glass: rgba(250, 251, 252, 0.72);
+  --lt-nav-border: rgba(10, 42, 82, 0.06);
+  --lt-title-gradient: linear-gradient(100deg, #0a0f1e 0%, #0a2a52 38%, #037dfb 100%);
+  --lt-title-gradient-on-dark: linear-gradient(100deg, #f0f2f5 0%, #93c5fd 55%, #60a5fa 100%);
+}
+
+/* Overleaf's "default" theme is its dark one. */
+html body[data-theme="default"] {
+  --lt-heading: #f0f2f5;
+  --lt-subtle-text: #9ca3af;
+  --lt-page-bg: #05070d;
+  --lt-dot: rgba(255, 255, 255, 0.05);
+  --lt-glow-1: rgba(3, 125, 251, 0.2);
+  --lt-glow-2: rgba(6, 182, 212, 0.1);
+  --lt-card-bg: rgba(18, 22, 31, 0.78);
+  --lt-card-border: rgba(255, 255, 255, 0.08);
+  --lt-card-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 30px 70px -30px rgba(0, 0, 0, 0.7), 0 0 80px rgba(37, 99, 235, 0.14);
+  --lt-field-bg: #0c1018;
+  --lt-field-border: #222836;
+  --lt-nav-glass: rgba(10, 14, 24, 0.72);
+  --lt-nav-border: rgba(255, 255, 255, 0.06);
+  --lt-title-gradient: var(--lt-title-gradient-on-dark);
+}
+
+/* ------------------------------------------------------------- typography */
+
+html body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+html h1, html h2, html h3, html h4, html h5, html h6,
+html .h1, html .h2, html .h3, html .h4, html .h5, html .h6 {
+  font-family: var(--font-sans);
+}
+
+html h1, html h2, html h3, html .h1, html .h2, html .h3 {
+  letter-spacing: -0.022em;
+}
+
+html .btn {
+  --bs-btn-font-family: var(--font-sans);
+}
+
+html .loading-screen .loading-screen-label {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+/* --------------------------------------------------------------- the mark */
+
+html .navbar-default {
+  --navbar-brand-width: 30px;
+}
+
+html .navbar-default .navbar-brand {
+  align-items: center;
+  gap: 10px;
+}
+
+html .navbar-default .navbar-brand .navbar-logo {
+  height: 38px;
+  background-position: center;
+  background-size: contain;
+  filter: drop-shadow(0 6px 12px rgba(3, 125, 251, 0.28));
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html .navbar-default .navbar-brand:hover .navbar-logo {
+  transform: translateY(-1px) rotate(-4deg);
+}
+
+/* Default: upstream's dark navbar (admin and other classic pages). */
+html .navbar-default .navbar-brand .navbar-title,
+html .navbar-default .navbar-brand .navbar-title span {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  background: var(--lt-title-gradient-on-dark);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+html body:not(.website-redesign) .navbar-default .navbar-brand .navbar-logo {
+  background-image: url("/img/lambdatex/mark-3d-nav-dark.png?v=1") !important;
+}
+
+/* Redesigned pages have a light navbar, or a navy one in dark mode. */
+html body.website-redesign .navbar-default .navbar-brand .navbar-title,
+html body.website-redesign .navbar-default .navbar-brand .navbar-title span {
+  background-image: var(--lt-title-gradient);
+}
+
+html body.website-redesign .navbar-main {
+  background: var(--lt-nav-glass);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  backdrop-filter: blur(14px) saturate(160%);
+  border-bottom: 1px solid var(--lt-nav-border);
+}
+
+/* Dashboard: the upstream nudge is sized for the Overleaf wordmark. */
+html .project-ds-nav-page .navbar-default .navbar-header .navbar-logo {
+  top: 0;
+  left: 0;
+}
+
+/* Editor toolbar home button. */
+html .ide-redesign-toolbar {
+  --redesign-toolbar-logo-url: url("/img/lambdatex/mark-3d-nav.png?v=1");
+}
+
+html body[data-theme="default"] .ide-redesign-toolbar {
+  --redesign-toolbar-logo-url: url("/img/lambdatex/mark-3d-nav-dark.png?v=1");
+}
+
+html .ide-redesign-toolbar .ide-redesign-toolbar-home-link .toolbar-ol-logo {
+  width: 26px;
+  height: 26px;
+  filter: drop-shadow(0 3px 6px rgba(3, 125, 251, 0.3));
+}
+
+/* Editor loading screen: the mark fills in as the project loads. */
+html .loading-screen .loading-screen-brand {
+  --loading-screen-ol-logo-empty-url: url("/img/lambdatex/mark-3d-empty.png?v=1");
+  --loading-screen-ol-logo-full-url: url("/img/lambdatex/mark-3d.png?v=1");
+  padding-top: 122.9%;
+}
+
+/* ------------------------------------- sign-in, account and other pages */
+
+html body.website-redesign main.content-alt {
+  min-height: calc(100vh - 150px);
+  background:
+    radial-gradient(1100px 620px at 10% -12%, var(--lt-glow-1), transparent 62%),
+    radial-gradient(900px 560px at 100% 0%, var(--lt-glow-2), transparent 60%),
+    radial-gradient(var(--lt-dot) 1px, transparent 1.3px) 0 0 / 22px 22px,
+    var(--lt-page-bg);
+}
+
+html body.website-redesign main.content-alt .card {
+  margin-top: clamp(20px, 6vh, 64px);
+  background: var(--lt-card-bg);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid var(--lt-card-border);
+  border-radius: 22px;
+  box-shadow: var(--lt-card-shadow);
+}
+
+html body.website-redesign main.content-alt .card .card-body {
+  padding: 28px 36px 32px;
+}
+
+html body.website-redesign main.content-alt .card h1,
+html body.website-redesign main.content-alt .card h2,
+html body.website-redesign main.content-alt .card h3 {
+  color: var(--lt-heading);
+}
+
+html body.website-redesign main.content-alt .card label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--lt-subtle-text);
+}
+
+html body.website-redesign main.content-alt .card .form-control {
+  height: 46px;
+  border-radius: 12px;
+  border-color: var(--lt-field-border);
+  background-color: var(--lt-field-bg);
+  box-shadow: 0 1px 2px rgba(10, 15, 30, 0.04);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+html body.website-redesign main.content-alt .card .form-control:focus {
+  border-color: var(--lt-accent);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
+}
+
+/* Sign-in, registration and password reset get the mark and a centred header. */
+html body.website-redesign main.content-alt .card:has(form:is([name="loginForm"], [name="passwordResetForm"], [name="registerForm"])) .card-body {
+  padding-top: 8px;
+}
+
+html body.website-redesign main.content-alt .card:has(form:is([name="loginForm"], [name="passwordResetForm"], [name="registerForm"]))::before {
+  content: "";
+  display: block;
+  width: 84px;
+  height: 104px;
+  margin: 34px auto 4px;
+  background: url("/img/lambdatex/mark-3d.png?v=1") center / contain no-repeat;
+  filter: drop-shadow(0 16px 24px rgba(3, 125, 251, 0.34));
+  animation: lt-float 6s ease-in-out infinite;
+}
+
+html body[data-theme="default"].website-redesign main.content-alt .card:has(form)::before {
+  background-image: url("/img/lambdatex/mark-3d-dark.png?v=1");
+}
+
+@keyframes lt-float {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50% { transform: translateY(-7px) rotate(-1.5deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html body.website-redesign main.content-alt .card::before { animation: none !important; }
+}
+
+html body.website-redesign main.content-alt .card:has(form:is([name="loginForm"], [name="passwordResetForm"], [name="registerForm"])) .page-header {
+  margin: 0 0 22px;
+  padding: 0;
+  border: 0;
+  text-align: center;
+}
+
+html body.website-redesign main.content-alt .card:has(form:is([name="loginForm"], [name="passwordResetForm"], [name="registerForm"])) .page-header h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+html body.website-redesign main.content-alt .card:has(form[name="loginForm"]) .page-header::after {
+  content: "Sign in to the LAMBDA Lab's LaTeX workspace";
+  display: block;
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--lt-subtle-text);
+}
+
+html body.website-redesign main.content-alt .card .login-register-hr-text-container {
+  display: none;
+}
+
+html body.website-redesign main.content-alt .card .actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+html body.website-redesign main.content-alt .card .actions .btn-primary {
+  width: 100%;
+  height: 48px;
+  font-weight: 600;
+  font-size: 15px;
+  border: 0;
+  background-image: linear-gradient(180deg, #3b7bf6 0%, #2563eb 100%);
+  box-shadow: var(--lt-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
+}
+
+html body.website-redesign main.content-alt .card .actions .btn-primary:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+  box-shadow: 0 14px 30px -12px rgba(37, 99, 235, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+html body.website-redesign main.content-alt .card .actions .float-end {
+  float: none !important;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--lt-subtle-text);
+  text-decoration: none;
+}
+
+html body.website-redesign main.content-alt .card .actions .float-end:hover {
+  color: var(--lt-accent);
+}
+
+/* -------------------------------------------------------------- dashboard */
+
+html body:not([data-theme="default"]) .project-ds-nav-page {
+  --ds-nav-bg-color: var(--lt-bg);
+}
+
+html body:not([data-theme="default"]) .project-ds-nav-page .project-ds-nav-content {
+  background:
+    radial-gradient(900px 420px at 85% -10%, rgba(3, 125, 251, 0.07), transparent 65%),
+    var(--neutral-10);
+  border: 1px solid rgba(10, 42, 82, 0.05);
+}
+
+html body[data-theme="default"] .project-ds-nav-page .project-ds-nav-content {
+  background-image: radial-gradient(900px 420px at 85% -10%, rgba(3, 125, 251, 0.12), transparent 65%);
+}
+
+html .project-ds-nav-page .project-ds-nav-main h1 {
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+html body:not([data-theme="default"]) .project-ds-nav-page .project-ds-nav-main h1 {
+  color: var(--lt-ink);
+}
+
+html .project-ds-nav-page .project-list-table,
+html .project-ds-nav-page .project-ds-nav-main .card {
+  border-radius: 14px;
+  box-shadow: var(--lt-shadow-card);
+}
+
+html .project-ds-nav-page .project-ds-nav-main .btn-primary {
+  box-shadow: var(--lt-glow);
+}
+
+html .project-ds-nav-page .project-ds-nav-main .form-control {
+  border-radius: 12px;
+}
+
+html .project-ds-nav-page .project-ds-nav-main .form-control:focus,
+html .project-ds-nav-page .project-ds-nav-main .input-group:focus-within {
+  border-color: var(--lt-accent);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+html .project-list-sidebar-wrapper-react .project-list-filters li.active .sidebar-filter-button {
+  box-shadow: inset 3px 0 0 var(--lt-accent);
+}
+
+/* Inter sets wider than Noto Sans: keep the sidebar labels on one line. */
+html .project-list-sidebar-wrapper-react .sidebar-filter-button,
+html .project-list-sidebar-wrapper-react .project-list-filters a {
+  font-size: 15px;
+  letter-spacing: -0.012em;
+  white-space: nowrap;
+}
+
+/* The parent-company mark becomes the lab's. */
+html .project-ds-nav-page .ds-nav-ds-name span {
+  display: none;
+}
+
+html .project-ds-nav-page .ds-nav-ds-name::before {
+  content: "";
+  display: inline-block;
+  width: 14px;
+  height: 17px;
+  margin-right: 8px;
+  vertical-align: -3px;
+  background: url("/img/lambdatex/mark-3d-nav.png?v=1") center / contain no-repeat;
+}
+
+html body[data-theme="default"] .project-ds-nav-page .ds-nav-ds-name::before {
+  background-image: url("/img/lambdatex/mark-3d-nav-dark.png?v=1");
+}
+
+html .project-ds-nav-page .ds-nav-ds-name::after {
+  content: "LAMBDA Lab";
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: inherit;
+  opacity: 0.85;
+}
+
+/* ----------------------------------------------------------------- footer */
+
+html footer.site-footer {
+  border-top-color: var(--lt-nav-border);
+}
+
+html footer.site-footer .copyright-notice {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+/* Dashboard navbar shares the sidebar surface in both themes. */
+html body.website-redesign .project-ds-nav-page .navbar-main {
+  background: var(--ds-nav-bg-color);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-bottom: 0;
+}
+
+/* ------------------------------ password reset and other "auth-aux" pages */
+
+html body.website-redesign main:has(> .auth-aux-container) {
+  min-height: 100vh;
+  background:
+    radial-gradient(1100px 620px at 10% -12%, var(--lt-glow-1), transparent 62%),
+    radial-gradient(900px 560px at 100% 0%, var(--lt-glow-2), transparent 60%),
+    radial-gradient(var(--lt-dot) 1px, transparent 1.3px) 0 0 / 22px 22px,
+    var(--lt-page-bg);
+}
+
+html .auth-aux-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+html .auth-aux-logo img {
+  height: 40px;
+  filter: drop-shadow(0 6px 12px rgba(3, 125, 251, 0.28));
+}
+
+html .auth-aux-logo::after {
+  content: "LambdaTeX";
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  background: var(--lt-title-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+html .auth-aux-container {
+  min-height: 0;
+  max-width: 440px;
+  margin: 0 auto;
+  position: relative;
+  top: 112px;
+  padding: 34px 36px 30px;
+  background: var(--lt-card-bg);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid var(--lt-card-border);
+  border-radius: 22px;
+  box-shadow: var(--lt-card-shadow);
+}
+
+html .auth-aux-container h1 {
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--lt-heading);
+}
+
+html .auth-aux-container .form-control {
+  height: 46px;
+  border-radius: 12px;
+  border-color: var(--lt-field-border);
+  background-color: var(--lt-field-bg);
+}
+
+html .auth-aux-container .form-control:focus {
+  border-color: var(--lt-accent);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
+}
+
+html .auth-aux-container .btn-primary {
+  height: 48px;
+  font-weight: 600;
+  border: 0;
+  background-image: linear-gradient(180deg, #3b7bf6 0%, #2563eb 100%);
+  box-shadow: var(--lt-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}

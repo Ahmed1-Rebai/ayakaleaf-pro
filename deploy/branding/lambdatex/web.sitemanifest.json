@@ -1,0 +1,20 @@
+{
+  "name": "LambdaTeX",
+  "short_name": "LambdaTeX",
+  "icons": [
+    {
+      "src": "/img/lambdatex/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/img/lambdatex/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "theme_color": "#05070d",
+  "background_color": "#fafbfc",
+  "start_url": "/",
+  "display": "standalone"
+}

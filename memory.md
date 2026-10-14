@@ -22,6 +22,14 @@
   `.env`. Do not create `ai.env` or other copies of the key.
 - The repo's root `docker-compose.yml` is stock Overleaf CE. Don't use it.
 
+## Branding
+- Theme "LambdaTeX" (LAMBDA Lab): `deploy/branding/` (env, CSS, assets, nginx sub_filter
+  snippet, asset build tools). Details: `docs/BRANDING.md`.
+- Inputs came from the private repo `1dhouha/lambda-website` (3D `.glb` and flat logo).
+  Only generated assets are committed (no model file, no website source).
+- CSS changes: bump `?v=N` in `deploy/branding/nginx/lambdatex-branding.conf`, then
+  `docker exec sharelatex nginx -s reload`.
+
 ## Gotchas
 - `bin/up` pulls the TeX Live image before starting. Use `SIBLING_CONTAINERS_PULL=false bin/up -d`
   once it is present.
