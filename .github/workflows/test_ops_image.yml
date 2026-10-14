@@ -75,8 +75,15 @@ jobs:
       # --- Deploy And Test ---
       - name: "Setup Overleaf With Toolkit"
         working-directory: ./server-ce/test/toolkit
+        # Mongo sometimes exits while the toolkit starts it, start over then
         run: |
-          make setup SUITE=${{matrix.suite}} OVERLEAF_IMAGE=${{env.DOCKER_REGISTRY}}/${{env.IMAGE_NAME}}/ops:${{inputs.ops_tag || 'latest'}}
+          image=${{env.DOCKER_REGISTRY}}/${{env.IMAGE_NAME}}/ops:${{inputs.ops_tag || 'latest'}}
+          for attempt in 1 2 3; do
+            make setup SUITE=${{matrix.suite}} OVERLEAF_IMAGE=$image && exit 0
+            echo "::warning::Setup attempt $attempt failed"
+            make clean OVERLEAF_IMAGE=$image
+          done
+          exit 1
       - name: "Run E2E Tests"
         working-directory: ./server-ce/test/toolkit
         run: |
