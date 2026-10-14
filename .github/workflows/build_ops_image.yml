@@ -65,7 +65,6 @@ jobs:
             jq -s '.[0] * .[1]' "services/web/locales/$lang" "$f" > "$f.tmp"
             mv "$f.tmp" "services/web/locales/$lang"
           done
-          docker run --rm -v "$(pwd)/services/web/":/overleaf/services/web -w /overleaf/services/web ghcr.io/ayaka-notes/overleaf-pro/dev:webpack yarn run extract-translations
           cd ./server-ce/
           cp .dockerignore ../
 

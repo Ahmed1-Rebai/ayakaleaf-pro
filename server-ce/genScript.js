@@ -21,6 +21,8 @@ switch (process.argv.pop()) {
 
           // install webpack and frontend dependencies
           console.log('yarn install || yarn install || yarn install')
+          // list the translation keys the frontend uses, webpack bundles only those
+          console.log('yarn run extract-translations')
           // run webpack
           console.log('yarn run webpack:production')
           // fetch Pyodide wheel bundle (numpy/matplotlib/etc.) for the python-runner module
