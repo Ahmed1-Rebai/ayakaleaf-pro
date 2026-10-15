@@ -61,99 +61,12 @@ If you just want to try Ayakaleaf Pro without setting up a server, you can use o
 
 If you want to deploy Ayakaleaf Pro for production use,  we have detailed installation instructions on the [Documents](https://ayakaleaf-pro.ayaka.space/) page. We highly recommend installing Ayakaleaf Pro using the [ayaka-notes/Toolkit](https://github.com/ayaka-notes/toolkit/).
 
-## Lab deployment (this fork)
+## LambdaTeX deployment (this fork)
 
-This fork adds a documented, reproducible self-hosted deployment wired to an
-OpenAI-compatible LLM gateway. The app itself is the unmodified upstream image.
-Details: [docs/LLM_INTEGRATION.md](docs/LLM_INTEGRATION.md), [docs/TESTING.md](docs/TESTING.md).
-
-**What runs:** [`ayaka-notes/toolkit`](https://github.com/ayaka-notes/toolkit) with
-`SERVER_PRO=true` → image `ghcr.io/ayaka-notes/overleaf-pro:6.3.0`, plus `mongo:8.0` and
-`redis:7.4`. Compiles run sandboxed in per-project `ghcr.io/ayaka-notes/texlive-full:2026.1`
-sibling containers. The repository's own root `docker-compose.yml` is the stock Overleaf CE
-example (`sharelatex/sharelatex`) and is **not** used.
-
-**Branding:** the instance is themed as **LambdaTeX** with the LAMBDA Lab's logo, colors and font, using config and mounted files only. See [docs/BRANDING.md](docs/BRANDING.md).
-
-### Setup
-
-Requirements: Docker + Compose v2, ~35 GB free disk (the TeX Live image alone is ~29 GB), 4 GB+ RAM.
-
-```bash
-git clone https://github.com/ayaka-notes/toolkit.git ~/ayakaleaf-toolkit
-cd ~/ayakaleaf-toolkit && bin/init
-sed -i 's/^SERVER_PRO=false/SERVER_PRO=true/' config/overleaf.rc
-# in config/variables.env set:
-#   TEX_LIVE_DOCKER_IMAGE=ghcr.io/ayaka-notes/texlive-full:2026.1
-#   ALL_TEX_LIVE_DOCKER_IMAGES=ghcr.io/ayaka-notes/texlive-full:2026.1
-
-# AI settings + secret key: ONE git-ignored file at this repo's root
-cp ~/ayakaleaf-pro/.env.example ~/ayakaleaf-pro/.env   # then set AI_API_KEY
-chmod 600 ~/ayakaleaf-pro/.env
-cp ~/ayakaleaf-pro/deploy/toolkit-override.example.yml config/docker-compose.override.yml
-chmod 600 config/variables.env config/docker-compose.override.yml
-```
-
-### Start / stop / logs
-
-```bash
-cd ~/ayakaleaf-toolkit
-bin/up -d                    # start (first run pulls ~30 GB of images)
-bin/stop                     # stop, keep containers
-bin/start                    # start stopped containers
-bin/docker-compose down      # remove containers (data is kept in data/)
-bin/logs -f web              # app logs (also: clsi, real-time, document-updater, ...)
-docker logs -f sharelatex    # container stdout
-bin/doctor                   # environment diagnostics
-```
-
-The UI is served on the internal network at **http://10.110.188.149:8001/** (`OVERLEAF_PORT=8001`, `OVERLEAF_LISTEN_IP=0.0.0.0` in `config/overleaf.rc`; `OVERLEAF_SITE_URL=http://10.110.188.149:8001` in `config/variables.env`). Plain HTTP: for anything beyond internal testing, use TLS.
-From another machine use an SSH tunnel (`ssh -L 8001:127.0.0.1:8001 <host>`), or put a TLS
-proxy in front (`bin/init --tls`) rather than exposing the port. Manage users at `/admin`.
-
-After editing `.env` or `config/*`, apply with `bin/docker-compose up -d sharelatex`.
-
-Data lives in `~/ayakaleaf-toolkit/data/{overleaf,mongo,redis}`. Back up all three.
-
-### Admin account and mail
-
-The admin account is defined in `.env`, not created by hand:
-
-```bash
-# set SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD in .env, then:
-deploy/scripts/seed-admin.sh                          # create, or update the password; idempotent
-deploy/scripts/seed-admin.sh --replace old@example.org   # rename an existing account (keeps its projects)
-```
-
-The script reads `.env` on the host and passes the values to the container over stdin, so
-they never appear in process arguments. Passwords go through Overleaf's normal policy checks.
-
-Mail uses the `Email__*` block in `.env` (Brevo SMTP relay, port 587 with STARTTLS), which is
-mapped onto Overleaf's `OVERLEAF_EMAIL_*` variables in the same file (see `.env.example`). Apply changes with
-`bin/docker-compose up -d sharelatex`. With mail enabled, flows that send mail (for example "Forgot your password?") fail if the relay is
-unreachable or rejects the login. The sender address must be verified in the Brevo account.
-
-### Usage
-
-Create a project from the dashboard, edit, and press **Recompile**; download the PDF or
-**Menu → Download → Source (zip)**. With AI configured, the editor shows the AI chat
-panel and a **Suggest fix** button on compile errors (Error Assistant). The chat's
-editing tools run in the browser, and every `replace_lines` edit is shown as a diff that
-the user must approve.
-
-### Troubleshooting
-
-| Symptom | Cause / fix |
-|---|---|
-| `bin/up` hangs before starting containers | It pulls the ~29 GB TeX Live image first. Pull it separately (`docker pull ghcr.io/ayaka-notes/texlive-full:2026.1`) or run `SIBLING_CONTAINERS_PULL=false bin/up -d`. |
-| AI chat: "The AI service returned an error" | Check `bin/logs web \| grep -iE "tex-gpt\|suggest-fix"`. `budget_exceeded` (HTTP 429) means the gateway key's spend limit is reached; ask the gateway admin. |
-| AI panel missing / `403 ai_not_configured` | `AI_ENABLED`, `AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL` must all be set in the container: `docker exec sharelatex sh -c 'echo ${#AI_API_KEY}'` should print a non-zero length. |
-| `403 ai_access_denied` | An admin disabled AI for that user (`aiFeatures.enabled=false`). |
-| Compile fails with Docker errors | Docker socket must be mounted (`SIBLING_CONTAINERS_ENABLED=true`) and the TeX Live image present locally. |
-| Page not reachable from other machines (`ERR_CONNECTION_REFUSED`) | Check `docker port sharelatex`: `127.0.0.1:8001` means it is bound to loopback only. Set `OVERLEAF_LISTEN_IP=0.0.0.0`, then `bin/docker-compose up -d sharelatex`. A timeout instead of a refusal points to a network firewall. |
-| "Forgot your password?" → *Something went wrong* (500) | The SMTP relay is unreachable: `bin/logs web \| grep ECONNREFUSED`. Check `Email__Host`/`Email__Port` and the credentials, or comment out `OVERLEAF_EMAIL_FROM_ADDRESS` to turn mail off. |
-| `seed-admin.sh` fails with `contains_email` / `too_similar` | Overleaf rejects passwords that contain or resemble the email address; choose another. |
-| Port already in use | Change `OVERLEAF_PORT` in `config/overleaf.rc` (this deployment uses 8001), then `bin/docker-compose up -d sharelatex`. |
+This branch adds the LAMBDA Lab's deployment of Ayakaleaf Pro, **LambdaTeX**: AI gateway
+integration, branding, admin and mail setup, a server-side patch and tests, under `deploy/`
+and `docs/`. The application itself runs from the published image. The deployment guide is
+[LAMBDATEX.md](LAMBDATEX.md); the same files live in the lab's LambdaTeX repository on GitLab.
 
 ## Upgrading
 

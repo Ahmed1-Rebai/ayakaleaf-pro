@@ -4,3 +4,8 @@
 # user defined files
 .env
 docker-compose.override.yml
+
+# LambdaTeX asset build: private inputs and generated output
+deploy/branding/tools/*.glb
+deploy/branding/tools/lab-logo.png
+deploy/branding/tools/out/
