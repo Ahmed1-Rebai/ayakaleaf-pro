@@ -49,17 +49,25 @@ guarantee it.
 
 ### Safety model for agentic editing
 
-* Chat tools have **no server-side `execute`**: the browser runs them against the open
-  editor. How `replace_lines` edits are applied depends on the **edit mode** switch under
+* Chat tools run in the browser against the open editor (no server-side `execute`), except
+  `save_attached_image` (below). How `replace_lines` edits are applied depends on the **edit mode** switch under
   the prompt (added by LambdaTeX, `deploy/branding/lambdatex/lambdatex.js`):
   * **Manual** (default): each edit is shown as a diff and **applied only after the user
     clicks Apply** (or Reject).
   * **Auto**: each edit that arrives while Auto is on is applied through the same Apply
     action, one at a time. The app still opens the file, checks that `existingContent`
     matches, and reports back to the model. **Undo** stays on every applied edit, and
-    project history keeps every change. Edits already waiting when Auto is switched on are
-    left for the user. The choice is per browser (`localStorage`).
+    project history keeps every change. Only edits that arrive while the conversation is
+    open are applied: edits already waiting when Auto is switched on, and edits in a
+    conversation shown from history (page load, reload, reopened from the list) wait for
+    Apply. The choice is per browser (`localStorage`).
   The compile-log Error Assistant is not affected: its fixes are always applied by hand.
+* Without approval, in either mode, the assistant can only read files, compile, create a
+  **new empty** file (`create_file` refuses existing paths), change the Compiler setting
+  (`set_compiler`), and save an image attached in the chat (`save_attached_image`, run on
+  the server after a write-access check). That tool **never replaces a file**: a taken name
+  gets `-2`, `-3`… and the same image is reused. Changing the text of a file always goes
+  through `replace_lines`.
 * Access requires login. Per-user `aiFeatures.enabled=false` revokes access (checked on
   every request). The Error Assistant also requires read access to the project.
 * Tool calls per message are capped by `AI_MAX_STEPS`.

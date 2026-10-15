@@ -79,6 +79,14 @@ Checked with headless Chromium (Playwright) screenshots at 1440×900, and at 390
 | `ai_app_test.py`: chat LaTeX generation | ✅ PASS | reasoning → text stream, correct `tabular`, 1.4 s |
 | `ai_agentic_test.py`: agentic editing | ✅ PASS | `read_current_file` → `replace_lines` (lines 5–7) → `compile`: 0 errors → summary. This first version didn't replay reasoning, so it missed the browser failure below |
 
+## AI edits and permission (2026-10-15)
+
+| Test | Result |
+|---|---|
+| `browser/ai_edit_permissions_test.py`: Manual is the default; nothing changes before Apply; Reject keeps the text; Apply changes it; switching to Auto doesn't apply a waiting edit; **a reload in Auto doesn't apply a restored pending edit**; Auto applies a new edit without a click; Undo restores; reopening a conversation in Auto doesn't apply its pending edit | ✅ 9/9 (the reload case failed before the `lambdatex.js` fix: the old edit was applied) |
+| `ai_image_no_overwrite_test.py`: saving an attached image as an existing `images/photo.png` keeps the original byte-for-byte, saves `images/photo-2.png`, tells the model; the same image again writes nothing | ✅ 5/5 |
+| `ai_image_test.py` (regression): attached photo saved, included, compiles | ✅ |
+
 ## Welcome page (2026-10-15)
 
 | Test | Result |

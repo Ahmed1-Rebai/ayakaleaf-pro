@@ -91,7 +91,10 @@
  * on, one at a time, by pressing the app's own Apply button, so the app still
  * opens the file, checks the replaced text and reports back to the AI. Undo
  * stays available on every applied edit. Edits already waiting when Auto is
- * switched on are left for the user. The choice is remembered per browser.
+ * switched on are left for the user, and so are edits in a conversation that is
+ * shown from history (page load, reload, reopened from the list): they were never
+ * approved, so only edits that arrive while the conversation is open are applied.
+ * The choice is remembered per browser.
  *
  * Icons: Lucide "hand" and "zap" (ISC licence, https://lucide.dev).
  */
@@ -101,6 +104,9 @@
   var KEY = 'lambdatex.aiEditMode'
   var mode = readMode()
   var seen = Object.create(null) // fingerprints never to auto-apply
+  var shownAt = new WeakMap() // conversation view -> when it was first seen
+  var historical = new WeakSet() // cards that came with a conversation from history
+  var HISTORY_GRACE_MS = 3000 // cards rendered this soon after their view are history too
   var queue = []
   var busy = false
   var scheduled = false
@@ -153,6 +159,36 @@
   function fingerprint(card) {
     var code = card.querySelector('.workbench-code-diff') || card
     return code.textContent.replace(/\s+/g, ' ').trim()
+  }
+
+  // A conversation view is replaced whenever a conversation is opened or a new one
+  // is started. Cards already in it, or rendered right after it appears, belong to
+  // its history; a live reply takes far longer than the grace period.
+  function isHistorical(card) {
+    if (historical.has(card)) return true
+    var view = card.closest('.conversation')
+    var since = view ? shownAt.get(view) : undefined
+    if (since === undefined || Date.now() - since < HISTORY_GRACE_MS) {
+      historical.add(card)
+      return true
+    }
+    return false
+  }
+
+  function trackViews() {
+    var views = document.querySelectorAll('.workbench-panel .conversation')
+    for (var i = 0; i < views.length; i++) {
+      if (shownAt.has(views[i])) continue
+      shownAt.set(views[i], Date.now())
+      var cards = views[i].querySelectorAll('.workbench-code-suggestion')
+      for (var j = 0; j < cards.length; j++) historical.add(cards[j])
+    }
+  }
+
+  function liveCards() {
+    return pendingCards().filter(function (card) {
+      return !isHistorical(card)
+    })
   }
 
   function pendingCards() {
@@ -223,7 +259,7 @@
     if (busy || mode !== 'auto') return
     var fp = queue.shift()
     if (fp === undefined) return
-    var card = pendingCards().filter(function (c) {
+    var card = liveCards().filter(function (c) {
       return fingerprint(c) === fp
     })[0]
     if (!card) return pump()
@@ -261,9 +297,10 @@
 
   function scan() {
     scheduled = false
+    trackViews()
     ensureToggle()
     if (mode !== 'auto') return
-    pendingCards().forEach(function (card) {
+    liveCards().forEach(function (card) {
       var fp = fingerprint(card)
       if (!seen[fp]) {
         seen[fp] = true

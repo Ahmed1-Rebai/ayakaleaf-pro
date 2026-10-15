@@ -13,6 +13,8 @@ import { dynamicTool, jsonSchema } from 'ai'
 import logger from '@overleaf/logger'
 import EditorController from '../../../../app/src/Features/Editor/EditorController.mjs'
 import AuthorizationManager from '../../../../app/src/Features/Authorization/AuthorizationManager.mjs'
+import ProjectLocator from '../../../../app/src/Features/Project/ProjectLocator.mjs'
+import Errors from '../../../../app/src/Features/Errors/Errors.js'
 
 // Formats pdfLaTeX can include.
 const EXTENSIONS = { 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png' }
@@ -50,12 +52,49 @@ function targetPath(requested, hash, ext) {
   return SAFE_PATH.test(target) && !target.includes('..') ? target : null
 }
 
+async function findInProject(projectId, path) {
+  try {
+    const { element, type } = await ProjectLocator.promises.findElementByPath({
+      project_id: projectId,
+      path: `/${path}`,
+      exactCaseMatch: true,
+    })
+    return { type, hash: element.hash }
+  } catch (err) {
+    if (err instanceof Errors.NotFoundError) return null
+    throw err
+  }
+}
+
+// The tool runs without the user's approval, so it never replaces a project
+// file: the same image is reused, a different file keeps its name and the new
+// image gets the next free one (photo-2.jpg, ...).
+async function freePath(projectId, target, ext, data) {
+  const blobHash = crypto
+    .createHash('sha1')
+    .update(`blob ${data.length}\0`)
+    .update(data)
+    .digest('hex')
+  const base = target.slice(0, -(ext.length + 1))
+  for (let n = 1; n <= 50; n++) {
+    const candidate = n === 1 ? target : `${base}-${n}.${ext}`
+    const existing = await findInProject(projectId, candidate)
+    if (!existing) return { path: candidate, exists: false }
+    if (existing.type === 'file' && existing.hash === blobHash) {
+      return { path: candidate, exists: true }
+    }
+  }
+  return null
+}
+
 export function createSaveAttachedImageTool({ images, projectId, userId }) {
   return dynamicTool({
     description:
       'Save an image the user attached in this chat into the project, so the ' +
       'document can include it with \\includegraphics. Call it before referencing ' +
-      'the image, then use the returned path. Returns { saved, path } or { saved: false, error }.',
+      'the image, then use the returned path. Never replaces an existing file: if the ' +
+      'name is taken, the image is saved under a new name, which is returned. ' +
+      'Returns { saved, path, note? } or { saved: false, error }.',
     inputSchema: jsonSchema({
       type: 'object',
       properties: {
@@ -108,12 +147,19 @@ export function createSaveAttachedImageTool({ images, projectId, userId }) {
       if (!canWrite) {
         return { saved: false, error: 'The user cannot edit this project.' }
       }
+      const free = await freePath(projectId, target, ext, data)
+      if (!free) {
+        return { saved: false, error: `Too many files are named like ${target}; choose another path.` }
+      }
+      if (free.exists) {
+        return { saved: true, path: free.path, note: 'This image is already in the project; nothing was written.' }
+      }
       const tmp = Path.join(os.tmpdir(), `lambdatex-${crypto.randomUUID()}.${ext}`)
       try {
         await fs.writeFile(tmp, data)
         await EditorController.promises.upsertFileWithPath(
           projectId,
-          `/${target}`,
+          `/${free.path}`,
           tmp,
           null,
           'upload',
@@ -125,7 +171,13 @@ export function createSaveAttachedImageTool({ images, projectId, userId }) {
       } finally {
         await fs.rm(tmp, { force: true })
       }
-      return { saved: true, path: target }
+      return free.path === target
+        ? { saved: true, path: target }
+        : {
+            saved: true,
+            path: free.path,
+            note: `${target} already exists and was left unchanged; the image was saved as ${free.path}.`,
+          }
     },
   })
 }

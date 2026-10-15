@@ -104,7 +104,9 @@ Create a project from the dashboard, edit it, and press **Recompile**. Download 
 the source with **Menu → Download → Source (zip)**. The editor has an AI chat panel, and
 compile errors get a **Suggest fix** button. The switch under the chat prompt chooses how
 the assistant's edits are applied: **Manual** (default) shows each one as a diff to Apply or
-Reject; **Auto** applies them as they arrive, with **Undo** on each. To put a photo in the
+Reject; **Auto** applies them as they arrive, with **Undo** on each. Edits that were never
+approved (still waiting when Auto is switched on, or in a conversation reopened after a
+reload) are never applied by themselves. To put a photo in the
 document, attach it in the chat and ask (e.g. "insert my photo at the bottom"): the assistant
 saves it into the project under `images/` and includes it.
 

@@ -67,6 +67,10 @@
   The access box points to https://lambdalab.org/ (the lab's services are managed there); `/register`
   still shows the admin email. Short pages: body is a flex column (thin footer) so the footer sits
   at the bottom; don't reintroduce fixed `min-height` values on `main`.
+- Auto mode (lambdatex.js) only applies cards created live: cards present when a `.conversation`
+  view appears (or within 3 s) are history and wait for Apply. Without this, a reload in Auto
+  applied a never-approved restored edit (found and fixed 2026-10-15).
+- `save_attached_image` runs without approval, so it never overwrites (free name / reuse by hash).
 - API tests must replay reasoning like the browser does; real UI checks need the Playwright
   browser test (`deploy/tests/browser/`).
 
