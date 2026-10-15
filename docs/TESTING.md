@@ -79,6 +79,15 @@ Checked with headless Chromium (Playwright) screenshots at 1440×900, and at 390
 | `ai_app_test.py`: chat LaTeX generation | ✅ PASS | reasoning → text stream, correct `tabular`, 1.4 s |
 | `ai_agentic_test.py`: agentic editing | ✅ PASS | `read_current_file` → `replace_lines` (lines 5–7) → `compile`: 0 errors → summary. This first version didn't replay reasoning, so it missed the browser failure below |
 
+## AI autocomplete (2026-10-15)
+
+| Test | Result |
+|---|---|
+| Gateway, Qwen3.6, thinking on vs off for a short completion | on: 0.61 s and no text (all tokens spent on reasoning); off: 0.09–0.24 s |
+| `ai_autocomplete_test.py` (API): space before a new word, no double space, mid-word continuation, auto-closed `$` not repeated, new sentence after a full stop, French document, median latency < 1 s (0.18 s); invalid id 400, unknown project 404, missing CSRF and anonymous rejected | ✅ 11/11 |
+| `browser/ai_autocomplete_test.py`: ghost text 0.6 s after typing stops; document unchanged while shown; Tab inserts; Esc dismisses without change; typing the suggested characters keeps the rest; nothing inside `\cite{`; Overleaf's `\subsec…` completion and Tab still work; Settings switch turns it off; Tab indents when there is no suggestion | ✅ 9/9 |
+| Frontend build: same 2 webpack warnings as before; both module entries registered | ✅ |
+
 ## AI edits and permission (2026-10-15)
 
 | Test | Result |

@@ -17,9 +17,11 @@ mkdir -p "$NEW"
 
 docker run --rm --entrypoint sh --memory 6g --memory-swap 9g \
   -e NODE_OPTIONS=--max-old-space-size=5120 -e OWNER="$(id -u):$(id -g)" \
-  -v "$ROOT/deploy/patches/frontend/workbench:/patch:ro" -v "$NEW:/out" "$IMAGE" -c '
+  -v "$ROOT/deploy/patches/frontend/workbench:/patch:ro" \
+  -v "$ROOT/deploy/frontend/register-modules.cjs:/register-modules.cjs:ro" -v "$NEW:/out" "$IMAGE" -c '
     set -e
     tar -C /patch --exclude="*.diff" -cf - . | tar -C /overleaf/services/web/modules/workbench/frontend -xf -
+    node /register-modules.cjs /overleaf/services/web/config/settings.defaults.js > /out/register.log 2>&1
     cd /overleaf
     yarn install --immutable > /out/install.log 2>&1   # the image links production deps only
     cd services/web

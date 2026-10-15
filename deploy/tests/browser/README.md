@@ -17,7 +17,8 @@ docker rmi mcr.microsoft.com/playwright/python:v1.55.0-noble
 The same command runs the other browser tests: `ai_conversations_test.py` (saved
 conversations) `ai_compiler_test.py` (automatic TeX engine through the assistant and the
 Recompile button) `welcome_page_test.py` (the public welcome page; creates nothing) and
-`ai_edit_permissions_test.py` (Manual / Auto: no edit is ever applied without approval). Each deletes its project afterwards, also when it fails.
+`ai_edit_permissions_test.py` (Manual / Auto: no edit is ever applied without approval) and
+`ai_autocomplete_test.py` (ghost text, Tab / Esc, Settings switch). Each deletes its project afterwards, also when it fails.
 
 Screenshots go to `/tmp/lambdatex-tests` inside the container (set `LT_TEST_DIR` and
 mount a folder to keep them).

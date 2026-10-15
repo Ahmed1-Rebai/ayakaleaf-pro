@@ -110,6 +110,12 @@ reload) are never applied by themselves. To put a photo in the
 document, attach it in the chat and ask (e.g. "insert my photo at the bottom"): the assistant
 saves it into the project under `images/` and includes it.
 
+While you type in a `.tex` file, **AI autocomplete** suggests how to continue the line as grey
+text: **Tab** accepts it, **Esc** dismisses it, and typing the same characters keeps the rest.
+It stays quiet inside `\cite{}`/`\ref{}`/file arguments and command names (Overleaf's own
+completion handles those) and in the Visual editor. Turn it off in **Settings → Editor → AI
+autocomplete**.
+
 Conversations with the assistant are saved per user and project. The 🕘 button in the
 assistant's header opens **Conversations**: reopen, rename or delete one, or start a **New
 conversation**. Reopening a project resumes the last conversation.

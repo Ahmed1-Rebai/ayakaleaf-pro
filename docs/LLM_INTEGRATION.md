@@ -166,3 +166,25 @@ The server chooses the engine on every compile, including the assistant's `compi
   to use when a font is missing.
 * The `compile` and `get_diagnostics` results include `compiler`, the engine the editor
   now has, so the assistant can say what was used.
+
+## AI autocomplete
+
+Inline suggestions in the source editor (grey ghost text; Tab accepts, Esc dismisses).
+
+* **Server:** `POST /workbench/autocomplete { projectId, path, prefix, suffix }` →
+  `{ completion }` (`deploy/patches/workbench/AutocompleteController.mjs`). Login, AI access,
+  the user's AI consent and write access to the project are required; the token quota counts
+  it; 120 requests/minute per user. The model's thinking is switched off
+  (`chat_template_kwargs: { enable_thinking: false }`): with Qwen3.6 a suggestion takes about
+  0.15 s; with thinking on it used all its tokens on reasoning and returned nothing. If a
+  gateway rejects that option it is dropped automatically.
+* **Prompt:** the text before and after the cursor (3,000 / 1,000 characters) with a cursor
+  mark; one line at most, verbatim spacing, same language as the document. The reply is
+  cleaned: no repeated text, no duplicate of an auto-closed `}`/`$`, no double space, one line.
+* **Editor:** a CodeMirror extension (`deploy/patches/frontend/workbench/js/codemirror/
+  ai-autocomplete.ts`) asks 450 ms after you stop typing, at the end of a line, in LaTeX
+  files, in Code mode. It skips command names and `\cite`/`\ref`/`\label`/file arguments,
+  waits while Overleaf's completion list or a snippet is active, and cancels the request as
+  soon as you type again.
+* **Settings:** Settings → Editor → AI autocomplete (per browser). `AI_AUTOCOMPLETE=false`
+  turns the endpoint off; `AI_AUTOCOMPLETE_MODEL` uses another model on the same gateway.
