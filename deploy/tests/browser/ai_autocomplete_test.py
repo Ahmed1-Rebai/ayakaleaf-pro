@@ -29,7 +29,7 @@ GHOST_JS = """() => { const g = document.querySelector('.cm-content .ol-cm-ai-gh
 def doc_text(pg):
     # the ghost text is a widget inside the line: leave it out, it is not in the document
     return pg.evaluate("""() => [...document.querySelectorAll('.cm-content .cm-line')].map(l => {
-      const c = l.cloneNode(true); c.querySelectorAll('.ol-cm-ai-ghost').forEach(g => g.remove()); return c.textContent }).join('\\n')""")
+      const c = l.cloneNode(true); c.querySelectorAll('.ol-cm-ai-ghost, .ol-cm-ai-fix-new, .ol-cm-ai-ghost-hint').forEach(g => g.remove()); return c.textContent }).join('\\n')""")
 
 
 def ghost(pg):
@@ -74,6 +74,23 @@ with sync_playwright() as p:
     pg.keyboard.press("Tab"); time.sleep(0.5)
     after = doc_text(pg)
     check("Tab inserts the suggestion", g is not None and ("In this paper, we " + g) in after and ghost(pg) is None)
+
+    # ---------- corrections: shown struck out with the fix, Tab applies them with the completion
+    FIX_JS = """() => ({ old: [...document.querySelectorAll('.cm-content .ol-cm-ai-fix-old')].map(e => e.textContent),
+      fix: [...document.querySelectorAll('.cm-content .ol-cm-ai-fix-new')].map(e => e.textContent) })"""
+    pg.keyboard.press("End"); pg.keyboard.press("Enter")
+    pg.keyboard.type("In this papr, we ", delay=40)
+    shown = None
+    for _ in range(60):
+        shown = pg.evaluate(FIX_JS)
+        if shown["old"]: break
+        time.sleep(0.2)
+    check("a typo is shown struck out with its fix", shown["old"] == ["papr"] and shown["fix"] == ["paper"], str(shown))
+    pg.screenshot(path=os.path.join(OUT, "autocomplete-correction.png"))
+    completion = ghost(pg) or ""
+    pg.keyboard.press("Tab"); time.sleep(0.5)
+    line = ([l for l in doc_text(pg).split("\n") if l.startswith("In this pap")] or [""])[-1]  # the line just corrected
+    check("Tab applies the fix and the completion", line == "In this paper, we " + completion and not pg.evaluate(FIX_JS)["old"], repr(line))
 
     # ---------- Esc dismisses, document unchanged
     pg.keyboard.press("End"); pg.keyboard.press("Enter"); pg.keyboard.press("Enter")
@@ -127,8 +144,19 @@ with sync_playwright() as p:
     check("built-in command completion still works", popup and "\\subsection" in doc_text(pg), f"popup={popup}")
     pg.keyboard.press("Escape")
 
+    # ---------- the corrections switch: completion still shown, no corrections
+    OPEN_SETTINGS = """() => { const b = [...document.querySelectorAll('button')].find(b => [...b.querySelectorAll('.material-symbols')].some(i => i.textContent.trim() === 'settings')); if (b) b.click() }"""
+    pg.evaluate(OPEN_SETTINGS); pg.wait_for_selector("#aiCorrections", timeout=15000); time.sleep(0.5)
+    pg.locator("#aiCorrections").click(); time.sleep(0.3)
+    pg.keyboard.press("Escape"); time.sleep(0.8)
+    put_cursor_on_empty_line(pg)
+    pg.keyboard.type("The resutls of our study show that ", delay=40)
+    g = wait_ghost(pg)
+    check("corrections switched off: completion only", bool(g) and not pg.evaluate(FIX_JS)["old"], f"{g!r} {pg.evaluate(FIX_JS)}")
+    pg.keyboard.press("Escape")
+
     # ---------- the switch in Settings turns it off
-    pg.evaluate("""() => { const b = [...document.querySelectorAll('button')].find(b => [...b.querySelectorAll('.material-symbols')].some(i => i.textContent.trim() === 'settings')); if (b) b.click() }""")
+    pg.evaluate(OPEN_SETTINGS)
     pg.wait_for_selector("#aiAutocomplete", timeout=15000); time.sleep(0.5)
     pg.screenshot(path=os.path.join(OUT, "autocomplete-setting.png"))
     pg.locator("#aiAutocomplete").click(); time.sleep(0.3)

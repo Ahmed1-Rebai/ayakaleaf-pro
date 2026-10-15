@@ -1,6 +1,7 @@
 // LambdaTeX addition: AI autocomplete for the LaTeX editor (grey "ghost" text).
 //
-// POST /workbench/autocomplete { projectId, path, prefix, suffix } -> { completion }
+// POST /workbench/autocomplete { projectId, path, prefix, suffix, corrections? }
+//   -> { completion, fixes: [{ from, to, text, wrong }] } (offsets relative to the cursor)
 //
 // Same gateway, model, AI access check, consent and token quota as the chat.
 // The model's thinking is switched off (chat_template_kwargs), so a suggestion
@@ -17,7 +18,7 @@ import UserGetter from '../../../../app/src/Features/User/UserGetter.mjs'
 import Errors from '../../../../app/src/Features/Errors/Errors.js'
 import { getProvider } from './WorkbenchAiClient.mjs'
 import { isQuotaEnabled, getRemainingTokens, recordTokenUsage } from './TokenQuota.mjs'
-import { cleanCompletion } from './AutocompleteText.mjs'
+import { cleanCompletion, parseCorrectionReply, placeFixes } from './AutocompleteText.mjs'
 
 const ENABLED = !/^(false|0|off|no)$/i.test(process.env.AI_AUTOCOMPLETE || '')
 const PROJECT_ID = /^[0-9a-f]{24}$/
@@ -36,6 +37,16 @@ Reply with only the text to insert at ‸: no explanation, no quotes, no code fe
 - Match the language, notation and style of the document. Close braces, brackets or $ only if the text after ‸ does not already close them.
 - If nothing useful fits, reply with an empty message.`
 
+// With corrections (the default), the same request also checks the sentence
+// just typed; the reply is JSON so fixes and continuation stay apart.
+const SYSTEM_WITH_FIXES = `You are the inline autocomplete and autocorrect of a LaTeX editor. The user is typing; ‸ marks the cursor, which is at the start of a new word.
+Reply with JSON only: {"fixes": [{"wrong": "...", "right": "..."}], "text": "..."}
+- "fixes": clear spelling or grammar mistakes in the sentence just before ‸ (at most 3). "wrong" is copied exactly from that text and "right" is its correction. Never change LaTeX commands, labels, citation keys, math, names, technical terms or the author's wording and style. Use [] when there is no clear mistake.
+- "text": the text to insert at ‸, without a leading space: the next words of the (corrected) sentence, one line at most, ideally under 15 words. "" if nothing useful fits.
+- If ‸ follows the end of a sentence, start the next sentence; never continue a finished sentence with a comma.
+- Never repeat text that is before or after ‸. Close braces, brackets or $ only if the text after ‸ does not already close them.
+- Match the language, notation and style of the document.`
+
 function model() {
   return process.env.AI_AUTOCOMPLETE_MODEL || Settings.workbenchAi?.model
 }
@@ -50,6 +61,7 @@ async function complete(req, res) {
   if (!ENABLED) return res.status(404).json({ error: 'autocomplete_disabled' })
   const userId = SessionManager.getLoggedInUserId(req.session)
   const { projectId, path, prefix, suffix } = req.body || {}
+  const corrections = req.body?.corrections !== false
   if (
     !PROJECT_ID.test(String(projectId || '')) ||
     typeof prefix !== 'string' ||
@@ -89,9 +101,9 @@ async function complete(req, res) {
   })
   const request = withThinkingSwitch => ({
     model: getProvider()(model()),
-    system: SYSTEM,
+    system: corrections ? SYSTEM_WITH_FIXES : SYSTEM,
     prompt: `File: ${file}\n\n${before}‸${after}`,
-    maxOutputTokens: 48,
+    maxOutputTokens: corrections ? 120 : 48,
     temperature: 0.2,
     maxRetries: 0,
     abortSignal: AbortSignal.any([aborter.signal, AbortSignal.timeout(8000)]),
@@ -125,7 +137,14 @@ async function complete(req, res) {
       logger.warn({ err, userId }, 'autocomplete token usage not recorded')
     )
   }
-  res.json({ completion: cleanCompletion(result.text, before, after) })
+  if (!corrections) {
+    return res.json({ completion: cleanCompletion(result.text, before, after), fixes: [] })
+  }
+  const reply = parseCorrectionReply(result.text)
+  res.json({
+    completion: reply ? cleanCompletion(reply.text, before, after) : '',
+    fixes: reply ? placeFixes(reply.fixes, before) : [],
+  })
 }
 
 export default { complete: expressify(complete) }

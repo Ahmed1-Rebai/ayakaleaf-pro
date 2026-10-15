@@ -79,6 +79,18 @@ Checked with headless Chromium (Playwright) screenshots at 1440×900, and at 390
 | `ai_app_test.py`: chat LaTeX generation | ✅ PASS | reasoning → text stream, correct `tabular`, 1.4 s |
 | `ai_agentic_test.py`: agentic editing | ✅ PASS | `read_current_file` → `replace_lines` (lines 5–7) → `compile`: 0 errors → summary. This first version didn't replay reasoning, so it missed the browser failure below |
 
+## AI corrections and the integration client (2026-10-15)
+
+| Test | Result |
+|---|---|
+| Corrections on Qwen3.6, 3 runs per case | all planted mistakes found; 0 false corrections in 15 runs of correct text |
+| `autocomplete_text_test.mjs` (unit) with fix placement: whole words, last occurrence, current paragraph, no LaTeX/math/keys/labels, no made-up text or large rewrites, ≤ 3 fixes; repeated last word dropped | ✅ 42/42 |
+| `ai_autocomplete_test.py` (API): papr→paper, resutls/experimetns, Their→There; no fixes on correct English, technical names and `\\cite`; `corrections:false` → completion only; spacing and access rules as before | ✅ 22/22 |
+| `browser/ai_autocomplete_test.py`: typo shown struck out with its fix; Tab applies fix + completion; corrections switch off → completion only; all earlier checks | ✅ 14/14 |
+| `integration/client.test.ts` against the live server: every client method (projects, compile/PDF/zip, sharing links, users incl. delete/purge) | ✅ 26/26, nothing left behind |
+| Open in LambdaTeX (`POST /docs`, cross-site form): signed in → project created with the given name and `main.tex`, opened; signed out → login first | ✅ |
+| Client strict TypeScript 5.9 (`strict`, `erasableSyntaxOnly`) | ✅ |
+
 ## AI autocomplete (2026-10-15)
 
 | Test | Result |

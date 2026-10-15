@@ -115,6 +115,13 @@ text when you pause after a space or punctuation (not in the middle of a word): 
 It stays quiet inside `\cite{}`/`\ref{}`/file arguments and command names (Overleaf's own
 completion handles those) and in the Visual editor. Turn it off in **Settings → Editor → AI
 autocomplete**.
+The same suggestion also **corrects** the sentence you just typed: a spelling or grammar mistake
+shows struck out with the fix next to it (~~papr~~ paper), and Tab applies fixes and completion
+together (one undo). LaTeX commands, math, citation keys and labels are never changed.
+**Settings → Editor → AI corrections** turns this part off.
+
+To offer LambdaTeX from the lab website (sign-in with the website's accounts, "Open in
+LambdaTeX" links, a server API client), see `docs/INTEGRATION.md`.
 
 Conversations with the assistant are saved per user and project. The 🕘 button in the
 assistant's header opens **Conversations**: reopen, rename or delete one, or start a **New

@@ -197,5 +197,14 @@ Inline suggestions in the source editor (grey ghost text; Tab accepts, Esc dismi
   composed, and cancels the request as soon as you type again. A suggestion survives edits
   elsewhere in the document (e.g. a collaborator's); after a 429 (rate limit or quota) it
   waits a minute before asking again.
-* **Settings:** Settings → Editor → AI autocomplete (per browser). `AI_AUTOCOMPLETE=true` is
+* **Corrections:** with `corrections` (the default) the same request asks for JSON
+  `{fixes: [{wrong, right}], text}`: clear spelling/grammar mistakes in the sentence just typed,
+  plus the continuation. `placeFixes()` puts each fix on the last whole-word occurrence in the
+  current paragraph (last 400 characters), and drops anything touching `\\`, `$`, `%`, citation
+  keys, labels or file names, large rewrites and overlaps; the editor checks the text again
+  before showing it (struck out + fix) and applies fixes and completion in one undo step.
+  Measured on Qwen3.6 (3 runs per case): every planted mistake found (typos, there/their,
+  it's/its, French agreement), no correction on 15 runs of correct text (technical names, math,
+  `\\cite`), median 0.30–0.45 s. A repeated last word ("approaches to" + "to …") is dropped.
+* **Settings:** Settings → Editor → AI autocomplete and AI corrections (per browser). `AI_AUTOCOMPLETE=true` is
   set in `.env` (also the default); `false` turns the endpoint off; `AI_AUTOCOMPLETE_MODEL` uses another model on the same gateway.

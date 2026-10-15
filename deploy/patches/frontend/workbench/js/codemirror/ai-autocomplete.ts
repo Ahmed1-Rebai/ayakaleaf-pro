@@ -4,12 +4,14 @@
  * After a short pause in typing at a word boundary (after a space, punctuation,
  * a bracket or $, or at the start of a line), the text around the cursor is sent to
  * /workbench/autocomplete and the suggestion is shown as grey "ghost" text at
- * the cursor. Tab accepts it, Esc dismisses it, and typing the same characters
- * keeps the rest of it. It stays out of the way of Overleaf's own completion
+ * the cursor. The same request checks the sentence just typed: corrections show
+ * inline as struck-out text followed by the fix. Tab applies everything shown in
+ * one step (one undo), Esc dismisses it, and typing the same characters keeps the
+ * rest of the suggestion. It stays out of the way of Overleaf's own completion
  * list, of \cite/\ref/\label and file arguments (the model can't know the keys),
  * of command names, and of the Visual editor. Registered as a
  * sourceEditorExtensions module entry (deploy/frontend/register-modules.cjs);
- * the switch is in Settings → Editor (../components/ai-autocomplete-setting.tsx).
+ * the switches are in Settings → Editor (../components/ai-autocomplete-setting.tsx).
  */
 import {
   Prec,
@@ -33,6 +35,7 @@ import getMeta from '@/utils/meta'
 import { isVisual } from '@/features/source-editor/extensions/visual/visual'
 
 const STORAGE_KEY = 'lambdatex.aiAutocomplete'
+const CORRECTIONS_KEY = 'lambdatex.aiCorrections'
 const TOGGLE_EVENT = 'lambdatex:ai-autocomplete'
 const DELAY_MS = 450
 const PREFIX_CHARS = 3000
@@ -64,34 +67,80 @@ export function setAiAutocompleteEnabled(enabled: boolean) {
   window.dispatchEvent(new CustomEvent(TOGGLE_EVENT, { detail: enabled }))
 }
 
-type Suggestion = { pos: number; text: string } | null
+export function isAiCorrectionsEnabled(): boolean {
+  try {
+    return window.localStorage.getItem(CORRECTIONS_KEY) !== 'off'
+  } catch {
+    return true
+  }
+}
+
+export function setAiCorrectionsEnabled(enabled: boolean) {
+  try {
+    window.localStorage.setItem(CORRECTIONS_KEY, enabled ? 'on' : 'off')
+  } catch {}
+  window.dispatchEvent(new CustomEvent(TOGGLE_EVENT, { detail: enabled }))
+}
+
+// A correction replaces document text [from, to) with `insert`.
+type Fix = { from: number; to: number; insert: string }
+type Suggestion = { pos: number; text: string; fixes: Fix[] } | null
+type ServerFix = { from: number; to: number; text: string; wrong: string }
 
 const setSuggestion = StateEffect.define<Suggestion>()
 
+// Grey continuation at the cursor, or the fix shown after a struck-out mistake.
 class GhostText extends WidgetType {
-  constructor(readonly text: string) {
+  constructor(
+    readonly text: string,
+    readonly kind: 'ghost' | 'fix',
+    readonly hint: boolean
+  ) {
     super()
   }
 
   eq(other: GhostText) {
-    return other.text === this.text
+    return other.text === this.text && other.kind === this.kind && other.hint === this.hint
   }
 
   toDOM() {
-    const ghost = document.createElement('span')
-    ghost.className = 'ol-cm-ai-ghost'
-    ghost.setAttribute('aria-hidden', 'true')
-    ghost.textContent = this.text
-    const hint = document.createElement('span')
-    hint.className = 'ol-cm-ai-ghost-hint'
-    hint.textContent = 'Tab'
-    ghost.appendChild(hint)
-    return ghost
+    const wrapper = document.createElement('span')
+    wrapper.setAttribute('aria-hidden', 'true')
+    const text = document.createElement('span')
+    text.className = this.kind === 'fix' ? 'ol-cm-ai-fix-new' : 'ol-cm-ai-ghost'
+    text.textContent = this.text
+    wrapper.appendChild(text)
+    if (this.hint) {
+      const hint = document.createElement('span')
+      hint.className = 'ol-cm-ai-ghost-hint'
+      hint.textContent = 'Tab'
+      wrapper.appendChild(hint)
+    }
+    return wrapper
   }
 
   ignoreEvent() {
     return false
   }
+}
+
+const struckOut = Decoration.mark({ class: 'ol-cm-ai-fix-old' })
+
+function decorationsFor(value: Suggestion) {
+  if (!value) return Decoration.none
+  const ranges = value.fixes.flatMap((fix, i) => [
+    struckOut.range(fix.from, fix.to),
+    Decoration.widget({
+      widget: new GhostText(fix.insert, 'fix', !value.text && i === value.fixes.length - 1),
+      side: 1,
+    }).range(fix.to),
+  ])
+  if (value.text) {
+    ranges.push(
+      Decoration.widget({ widget: new GhostText(value.text, 'ghost', true), side: 1 }).range(value.pos)
+    )
+  }
+  return Decoration.set(ranges, true)
 }
 
 type Change = { fromA: number; toA: number; text: string }
@@ -110,7 +159,8 @@ const suggestionField = StateField.define<Suggestion>({
           changes.push({ fromA, toA, text: inserted.toString() })
         }
       )
-      // Typing the next characters of the suggestion keeps the rest of it.
+      // Typing the next characters of the suggestion keeps the rest of it
+      // (corrections are before the cursor, so they stay where they are).
       const [typed] = changes
       if (
         changes.length === 1 &&
@@ -120,16 +170,27 @@ const suggestionField = StateField.define<Suggestion>({
         typed.text.length < value.text.length &&
         value.text.startsWith(typed.text)
       ) {
-        return { pos: value.pos + typed.text.length, text: value.text.slice(typed.text.length) }
+        return {
+          pos: value.pos + typed.text.length,
+          text: value.text.slice(typed.text.length),
+          fixes: value.fixes,
+        }
       }
-      // Any other edit at the cursor ends it; edits elsewhere (e.g. a
-      // collaborator's) keep it, moved with the text.
-      if (changes.some(change => change.fromA <= value.pos && change.toA >= value.pos)) {
+      // Any other edit at the cursor or on a correction ends it; edits elsewhere
+      // (e.g. a collaborator's) keep it, moved with the text.
+      const touches = (from: number, to: number) =>
+        changes.some(change => change.fromA <= to && change.toA >= from)
+      if (touches(value.pos, value.pos) || value.fixes.some(fix => touches(fix.from, fix.to))) {
         return null
       }
       const pos = tr.changes.mapPos(value.pos, 1)
+      const fixes = value.fixes.map(fix => ({
+        from: tr.changes.mapPos(fix.from, 1),
+        to: tr.changes.mapPos(fix.to, -1),
+        insert: fix.insert,
+      }))
       const { main } = tr.state.selection
-      return main.empty && main.head === pos ? { pos, text: value.text } : null
+      return main.empty && main.head === pos ? { pos, text: value.text, fixes } : null
     }
     if (tr.selection) {
       const { main } = tr.state.selection
@@ -137,14 +198,7 @@ const suggestionField = StateField.define<Suggestion>({
     }
     return value
   },
-  provide: (field: StateField<Suggestion>) =>
-    EditorView.decorations.from(field, (value: Suggestion) =>
-      value
-        ? Decoration.set([
-            Decoration.widget({ widget: new GhostText(value.text), side: 1 }).range(value.pos),
-          ])
-        : Decoration.none
-    ),
+  provide: (field: StateField<Suggestion>) => EditorView.decorations.from(field, decorationsFor),
 })
 
 function accept(view: EditorView) {
@@ -152,9 +206,14 @@ function accept(view: EditorView) {
   if (!value || completionStatus(view.state) === 'active') return false
   const { main } = view.state.selection
   if (!main.empty || main.head !== value.pos) return false
+  // Corrections and continuation in one transaction: one undo step.
+  const changes = view.state.changes([
+    ...value.fixes.map(fix => ({ from: fix.from, to: fix.to, insert: fix.insert })),
+    ...(value.text ? [{ from: value.pos, insert: value.text }] : []),
+  ])
   view.dispatch({
-    changes: { from: value.pos, insert: value.text },
-    selection: { anchor: value.pos + value.text.length },
+    changes,
+    selection: { anchor: changes.mapPos(value.pos, 1) },
     effects: setSuggestion.of(null),
     userEvent: 'input.complete',
     scrollIntoView: true,
@@ -242,16 +301,27 @@ function fetcher(path: string) {
             path,
             prefix,
             suffix: state.sliceDoc(pos, Math.min(doc.length, pos + SUFFIX_CHARS)),
+            corrections: isAiCorrectionsEnabled(),
           },
           signal: controller.signal,
         })
-          .then((data: { completion?: string }) => {
+          .then((data: { completion?: string; fixes?: ServerFix[] }) => {
             if (this.controller !== controller) return
             this.controller = null
             const current = view.state
-            const text = data?.completion
+            const text = typeof data?.completion === 'string' ? data.completion : ''
+            // Fix offsets are relative to the cursor; each must still match the text.
+            const fixes: Fix[] = []
+            for (const fix of Array.isArray(data?.fixes) ? data.fixes : []) {
+              const from = pos + fix.from
+              const to = pos + fix.to
+              if (from < 0 || to > pos || from >= to || typeof fix.text !== 'string') continue
+              if (current.sliceDoc(from, to) !== fix.wrong) continue
+              if (fixes.some(other => from < other.to && to > other.from)) continue
+              fixes.push({ from, to, insert: fix.text })
+            }
             if (
-              !text ||
+              (!text && !fixes.length) ||
               current.doc !== doc ||
               !current.selection.main.empty ||
               current.selection.main.head !== pos ||
@@ -260,7 +330,7 @@ function fetcher(path: string) {
             ) {
               return
             }
-            view.dispatch({ effects: setSuggestion.of({ pos, text }) })
+            view.dispatch({ effects: setSuggestion.of({ pos, text, fixes }) })
           })
           .catch((error: any) => {
             if (this.controller === controller) this.controller = null
@@ -286,6 +356,25 @@ const ghostTheme = EditorView.baseTheme({
   },
   '&dark .ol-cm-ai-ghost': {
     color: '#7c8799',
+  },
+  '.ol-cm-ai-fix-old': {
+    textDecoration: 'line-through',
+    textDecorationColor: '#e5484d',
+    textDecorationThickness: '1.5px',
+    backgroundColor: 'rgba(229, 72, 77, 0.08)',
+    borderRadius: '2px',
+  },
+  '.ol-cm-ai-fix-new': {
+    marginLeft: '2px',
+    padding: '0 2px',
+    borderRadius: '3px',
+    color: '#12805c',
+    backgroundColor: 'rgba(18, 128, 92, 0.1)',
+    whiteSpace: 'pre',
+  },
+  '&dark .ol-cm-ai-fix-new': {
+    color: '#3ecf8e',
+    backgroundColor: 'rgba(62, 207, 142, 0.12)',
   },
   '.ol-cm-ai-ghost-hint': {
     display: 'inline-block',

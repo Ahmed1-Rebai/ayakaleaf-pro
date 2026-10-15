@@ -71,6 +71,12 @@
   view appears (or within 3 s) are history and wait for Apply. Without this, a reload in Auto
   applied a never-approved restored edit (found and fixed 2026-10-15).
 - `save_attached_image` runs without approval, so it never overwrites (free name / reuse by hash).
+- AI corrections ride on the autocomplete request (JSON {fixes, text}); fixes are placed
+  server-side (`placeFixes`) and re-checked client-side before display; separate switch.
+- Website integration: `docs/INTEGRATION.md` + `integration/lambdatex-client.ts` (server-side,
+  session + CSRF; no file-level edit API: root folder id isn't exposed over HTTP). OIDC SSO
+  creates accounts on first login (`EXTERNAL_AUTH=oidc`), untested here (no provider yet).
+  `/docs` default project name says "Overleaf": the client always sends `project_name`.
 - AI autocomplete only at word boundaries (spacing by rules in `AutocompleteText.mjs`): chat models
   are unreliable about leading spaces; measured alternatives (space flag, word field, text
   completion) all failed sometimes. Don't reintroduce mid-word suggestions without a FIM model.
