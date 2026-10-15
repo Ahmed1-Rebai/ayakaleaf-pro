@@ -33,6 +33,10 @@ The theme works by:
   pages. It uses Lucide's eye icons (`class="lucide lucide-eye h-4 w-4"`, and `lucide-eye-off`
   while shown), has `aria-label` and `aria-pressed`, and re-hides the password on submit. React
   pages (account settings) are left as they are.
+* adding a **Manual / Auto** switch for the AI assistant's edits under the chat prompt
+  (Lucide `hand` / `zap` icons). Auto presses the app's own Apply on each new edit, one
+  at a time, and never touches the single-button Undo / re-Apply view. See
+  `docs/LLM_INTEGRATION.md`, "Safety model".
 * toning down the footer: 12 px muted text and a dot instead of the `|`. Upstream's Community
   Edition disclaimer paragraph is hidden (operator's choice; it is not an AGPL requirement).
   The "Powered by Overleaf" and source-code links remain.

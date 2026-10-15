@@ -717,3 +717,74 @@ html .lt-password-toggle:focus-visible {
 /* Tailwind's h-4 / w-4, which the Lucide markup carries. */
 html .lt-password-toggle .h-4 { height: 1rem; }
 html .lt-password-toggle .w-4 { width: 1rem; }
+
+/* ------------------------------------- AI edit mode switch (lambdatex.js) */
+
+html .lt-ai-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid rgba(10, 42, 82, 0.1);
+  border-radius: 999px;
+  background: rgba(10, 42, 82, 0.05);
+}
+
+html .lt-ai-mode-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--lt-subtle-text, #475569);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+html .lt-ai-mode-option:hover {
+  color: var(--lt-accent);
+}
+
+html .lt-ai-mode-option:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.35);
+}
+
+html .lt-ai-mode-option.is-active {
+  background: #fff;
+  color: var(--lt-accent);
+  box-shadow: 0 1px 2px rgba(10, 15, 30, 0.08), 0 0 0 1px rgba(37, 99, 235, 0.18);
+}
+
+html .lt-ai-mode-option.is-active[data-mode="auto"] {
+  background: linear-gradient(180deg, #3b7bf6 0%, #2563eb 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px -4px rgba(37, 99, 235, 0.6);
+}
+
+/* Tailwind's h-4 / w-4 on the Lucide icons, a little smaller here. */
+html .lt-ai-mode .h-4 { height: 0.875rem; }
+html .lt-ai-mode .w-4 { width: 0.875rem; }
+
+html body[data-theme="default"] .lt-ai-mode {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+html body[data-theme="default"] .lt-ai-mode-option.is-active[data-mode="manual"] {
+  background: #1b2232;
+  color: #93c5fd;
+}
+
+/* The suggestion Auto mode is applying right now. */
+html .workbench-code-suggestion.lt-ai-auto-applying {
+  border-radius: 8px;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.45);
+  transition: box-shadow 0.2s;
+}

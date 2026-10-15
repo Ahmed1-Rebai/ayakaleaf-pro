@@ -1,0 +1,24 @@
+--- upstream services/web/modules/workbench/app/src/WorkbenchTools.mjs (ayaka-notes/ayakaleaf-pro 7e6ffc2)
++++ deploy/patches/workbench/WorkbenchTools.mjs (LambdaTeX)
+@@ -143,7 +143,20 @@
+ export default CLIENT_TOOLS
+ 
+ export async function convertWorkbenchMessages(messages) {
+-  const converted = await convertToModelMessages(messages)
++  // LambdaTeX patch: don't send earlier reasoning back to the model. The
++  // OpenAI-compatible provider replays it as `reasoning_content`, which some
++  // gateways reject (Groq: "property 'reasoning_content' is unsupported").
++  // Answers, tool calls and tool results are kept.
++  const withoutReasoning = messages.flatMap(message => {
++    if (message?.role !== 'assistant' || !Array.isArray(message.parts)) {
++      return [message]
++    }
++    const parts = message.parts.filter(part => part?.type !== 'reasoning')
++    return parts.some(part => part?.type !== 'step-start')
++      ? [{ ...message, parts }]
++      : []
++  })
++  const converted = await convertToModelMessages(withoutReasoning)
+   return converted.flatMap(message => {
+     if (message.role !== 'tool') return [message]
+ 

@@ -21,17 +21,20 @@ calls, edits = [], 0
 for turn in range(8):
     r = s.post(B + "/workbench/tex-gpt", stream=True, timeout=300, json={"messages": msgs, "enabledTools": []})
     assert r.status_code == 200, (r.status_code, r.text[:200])
-    pending, text, err = [], "", None
+    pending, text, err, reasoning = [], "", None, ""
     for raw in r.iter_lines():
         if not raw.startswith(b"data:") or raw[5:].strip() == b"[DONE]": continue
         e = json.loads(raw[5:])
         if e["type"] == "tool-input-available": pending.append(e)
         elif e["type"] == "text-delta": text += e["delta"]
+        elif e["type"] == "reasoning-delta": reasoning += e["delta"]
         elif e["type"] == "error": err = e["errorText"]
     if err: sys.exit(f"FAIL stream error on turn {turn}: {err}")
     if not pending:
         print(f"turn {turn}: final answer: {text.strip()[:200]!r}"); break
-    parts = [{"type": "step-start"}]
+    # Replay the reasoning like the browser does, so a gateway that rejects
+    # reasoning history (see deploy/patches/) fails here too.
+    parts = [{"type": "step-start"}] + ([{"type": "reasoning", "text": reasoning, "state": "done"}] if reasoning else [])
     for c in pending:
         name, inp = c["toolName"], c["input"]; calls.append(name)
         if name in ("read_current_file", "open_file"): out = lines_of(cur())

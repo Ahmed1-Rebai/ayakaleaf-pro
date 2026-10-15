@@ -29,3 +29,5 @@ services:
       - /home/user/lambdatex/deploy/branding/lambdatex/lambda-logo.svg:/overleaf/services/web/public/img/ol-brand/overleaf-o.svg:ro
       # Admin seed script (deploy/scripts/seed-admin.sh)
       - /home/user/lambdatex/deploy/scripts:/overleaf/services/web/modules/server-ce-scripts/scripts/lambdatex:ro
+      # Server-side patch: drop earlier reasoning from AI chat history (deploy/patches/README.md)
+      - /home/user/lambdatex/deploy/patches/workbench/WorkbenchTools.mjs:/overleaf/services/web/modules/workbench/app/src/WorkbenchTools.mjs:ro

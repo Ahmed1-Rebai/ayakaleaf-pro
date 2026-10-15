@@ -50,8 +50,16 @@ guarantee it.
 ### Safety model for agentic editing
 
 * Chat tools have **no server-side `execute`**: the browser runs them against the open
-  editor. `replace_lines` edits are shown as a diff and **applied only after the user
-  approves**. The model never writes to the project unattended.
+  editor. How `replace_lines` edits are applied depends on the **edit mode** switch under
+  the prompt (added by LambdaTeX, `deploy/branding/lambdatex/lambdatex.js`):
+  * **Manual** (default): each edit is shown as a diff and **applied only after the user
+    clicks Apply** (or Reject).
+  * **Auto**: each edit that arrives while Auto is on is applied through the same Apply
+    action, one at a time. The app still opens the file, checks that `existingContent`
+    matches, and reports back to the model. **Undo** stays on every applied edit, and
+    project history keeps every change. Edits already waiting when Auto is switched on are
+    left for the user. The choice is per browser (`localStorage`).
+  The compile-log Error Assistant is not affected: its fixes are always applied by hand.
 * Access requires login. Per-user `aiFeatures.enabled=false` revokes access (checked on
   every request). The Error Assistant also requires read access to the project.
 * Tool calls per message are capped by `AI_MAX_STEPS`.
@@ -75,10 +83,14 @@ Current gateway: LiteLLM at `http://10.110.150.21:30883/v1`, model `groq/openai/
 | Tool-result round-trip (`role: tool`) | ✅ verified | model continues correctly after a tool result |
 | Compile-error assistance (`/suggest-fix`) | ✅ verified | `Environment itemiz undefined` → line 5 `\begin{itemiz}` → `\begin{itemize}` (0.7 s) |
 | Chat via app + LaTeX generation (`/workbench/tex-gpt`) | ✅ verified | reasoning → text stream; correct `tabular` (1.4 s) |
-| Agentic editing (multi-step tool loop) | ✅ verified | `read_current_file` → one `replace_lines` fixing lines 5–7 (`existingContent` exact) → `compile` → 0 errors → summary |
+| Agentic editing (multi-step tool loop) | ✅ verified | API test replaying reasoning like the browser: `read_current_file` → `replace_lines` ×2 → `compile`: 0 errors → summary |
+| Real editor, multi-step chat | ✅ verified (with `deploy/patches/`) | Groq rejected the replayed reasoning (`property 'reasoning_content' is unsupported`), so every follow-up or tool-using chat failed with "Something's gone wrong". The server patch drops earlier reasoning from the history |
+| Edit mode Manual / Auto (browser) | ✅ verified | Manual: document unchanged until Apply; Auto: applied with no click, Undo shown (`deploy/tests/browser/`) |
 | Graceful failure | ✅ verified | gateway errors (429 budget, 500 backend down) → client gets a generic message; details only in server logs |
 
 Observations:
+* **Reasoning history.** Earlier reasoning is not sent back to the model (server patch in
+  `deploy/patches/`): some gateways reject it, and models don't need it.
 * **Light reasoning.** gpt-oss-120b reasons briefly (22–30 reasoning tokens on simple requests)
   and answers in well under 2 s, so the AI features feel immediate.
 * **Error Assistant is one-error, one-line.** A typo on two lines (`\begin{itemiz}` and

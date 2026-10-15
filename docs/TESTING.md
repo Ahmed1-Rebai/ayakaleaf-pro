@@ -77,7 +77,19 @@ Checked with headless Chromium (Playwright) screenshots at 1440×900, and at 390
 | tools · streamed tools · tool round-trip | ✅ PASS | `suggestLineChange` with valid JSON; coherent reply after `role: tool` |
 | `ai_app_test.py`: Error Assistant | ✅ PASS | line 5 `\begin{itemiz}` → `\begin{itemize}`, 0.7 s |
 | `ai_app_test.py`: chat LaTeX generation | ✅ PASS | reasoning → text stream, correct `tabular`, 1.4 s |
-| `ai_agentic_test.py`: agentic editing | ✅ PASS | `read_current_file` → `replace_lines` (lines 5–7) → `compile`: 0 errors → summary |
+| `ai_agentic_test.py`: agentic editing | ✅ PASS | `read_current_file` → `replace_lines` (lines 5–7) → `compile`: 0 errors → summary. This first version didn't replay reasoning, so it missed the browser failure below |
+
+## AI edit mode and reasoning patch (real editor, Playwright)
+
+| Test | Result | Detail |
+|---|---|---|
+| Real-editor chat that uses a tool, before the patch | ❌ FAIL | AI read the file, then "Something's gone wrong": Groq `property 'reasoning_content' is unsupported` |
+| Same, with `deploy/patches/workbench/WorkbenchTools.mjs` mounted | ✅ PASS | read → replace_lines in one turn |
+| Switch under the prompt, default Manual | ✅ PASS | `manual=true auto=false` |
+| Manual: pending edit leaves the document unchanged; Apply fixes it | ✅ PASS | |
+| Auto: edit applied with no click; saved per browser | ✅ PASS | `localStorage` `lambdatex.aiEditMode=auto`; 2 Undo buttons, 0 pending |
+| `ai_agentic_test.py` replaying reasoning (as the browser does) | ✅ PASS | read → replace_lines ×2 → compile: 0 errors |
+| `check-patches.sh` | ✅ OK | the image's original still matches the patched version |
 
 ## Admin seed, password toggle, mail (2026-10-14)
 

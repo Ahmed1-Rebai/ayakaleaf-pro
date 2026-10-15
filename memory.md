@@ -38,6 +38,16 @@
 - CSS changes: bump `?v=N` in `deploy/branding/nginx/lambdatex-branding.conf`, then
   `docker exec sharelatex nginx -s reload`.
 
+## AI edit mode and server patch
+- `lambdatex.js` adds a Manual / Auto switch under the AI chat prompt (`localStorage`
+  `lambdatex.aiEditMode`). Auto clicks the app's own Apply on new two-button suggestion
+  cards (`.workbench-code-suggestion`), one at a time, by content fingerprint.
+- `deploy/patches/workbench/WorkbenchTools.mjs` (single-file mount) drops earlier reasoning
+  from chat history: Groq rejects `reasoning_content`. Run `deploy/patches/check-patches.sh`
+  after any image change; recreate the container after editing a patch.
+- API tests must replay reasoning like the browser does; real UI checks need the Playwright
+  browser test (`deploy/tests/browser/`).
+
 ## Mail
 - `.env` holds the user's `Email__*` block (Brevo: smtp-relay.brevo.com:587, STARTTLS, login)
   plus `OVERLEAF_EMAIL_*` lines that interpolate it (compose expands `${Email__…}` in env files).
