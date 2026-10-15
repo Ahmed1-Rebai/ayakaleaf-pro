@@ -71,9 +71,15 @@
   view appears (or within 3 s) are history and wait for Apply. Without this, a reload in Auto
   applied a never-approved restored edit (found and fixed 2026-10-15).
 - `save_attached_image` runs without approval, so it never overwrites (free name / reuse by hash).
+- AI autocomplete only at word boundaries (spacing by rules in `AutocompleteText.mjs`): chat models
+  are unreliable about leading spaces; measured alternatives (space flag, word field, text
+  completion) all failed sometimes. Don't reintroduce mid-word suggestions without a FIM model.
 - AI autocomplete: server `AutocompleteController.mjs` (thinking off via chat_template_kwargs, ~0.15 s),
   editor `codemirror/ai-autocomplete.ts` + settings section; both frontend entries are added to
   `overleafModuleImports` by `deploy/frontend/register-modules.cjs` during `build.sh` only.
+- `deploy/frontend/typecheck.sh`: strict tsc of the frontend patches in a throwaway container
+  (`PATCH_DIR` overrides the source; verified to fail on a deliberate error). IDE "Cannot find
+  module" errors on these files are expected in this repo.
 - API tests must replay reasoning like the browser does; real UI checks need the Playwright
   browser test (`deploy/tests/browser/`).
 

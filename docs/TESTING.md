@@ -84,8 +84,11 @@ Checked with headless Chromium (Playwright) screenshots at 1440×900, and at 390
 | Test | Result |
 |---|---|
 | Gateway, Qwen3.6, thinking on vs off for a short completion | on: 0.61 s and no text (all tokens spent on reasoning); off: 0.09–0.24 s |
-| `ai_autocomplete_test.py` (API): space before a new word, no double space, mid-word continuation, auto-closed `$` not repeated, new sentence after a full stop, French document, median latency < 1 s (0.18 s); invalid id 400, unknown project 404, missing CSRF and anonymous rejected | ✅ 11/11 |
-| `browser/ai_autocomplete_test.py`: ghost text 0.6 s after typing stops; document unchanged while shown; Tab inserts; Esc dismisses without change; typing the suggested characters keeps the rest; nothing inside `\cite{`; Overleaf's `\subsec…` completion and Tab still work; Settings switch turns it off; Tab indents when there is no suggestion | ✅ 9/9 |
+| Spacing before a suggestion, 3–5 runs per case on Qwen3.6: plain reply / `space` flag / "word at the cursor" / text completion | each failed sometimes (e.g. "are" + "powerful" → "arepowerful"); hence suggestions only at word boundaries, spacing by rules |
+| `autocomplete_text_test.mjs` (unit): spacing rules after spaces, punctuation, brackets, `$`, `~`, `-`, `'`; nothing mid-word; no repeated or auto-closed text; one line; length cap | ✅ 24/24 |
+| `ai_autocomplete_test.py` (API, run twice): after a space / comma / full stop spacing is right in English and French; `$…$` and `\section{}` without repeated closers; nothing inside or right after a word; median 0.14 s; invalid id 400, unknown project 404, missing CSRF and anonymous rejected | ✅ 15/15 both runs |
+| `browser/ai_autocomplete_test.py`: ghost text 0.6 s after typing stops; document unchanged while shown; Tab inserts ("we " + "propose a novel approach to"); Esc dismisses without change; typing the suggested characters keeps the rest; **a collaborator's edit elsewhere keeps the suggestion**; nothing right after a word or inside `\cite{`; Overleaf's completion and Tab still work; Settings switch turns it off | ✅ 11/11 |
+| `deploy/frontend/typecheck.sh`: strict tsc of the 6 frontend patch files against the image | ✅ no errors (fails as expected on a deliberate error) |
 | Frontend build: same 2 webpack warnings as before; both module entries registered | ✅ |
 
 ## AI edits and permission (2026-10-15)

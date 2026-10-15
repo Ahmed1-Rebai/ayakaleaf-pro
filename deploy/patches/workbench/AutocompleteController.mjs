@@ -17,60 +17,27 @@ import UserGetter from '../../../../app/src/Features/User/UserGetter.mjs'
 import Errors from '../../../../app/src/Features/Errors/Errors.js'
 import { getProvider } from './WorkbenchAiClient.mjs'
 import { isQuotaEnabled, getRemainingTokens, recordTokenUsage } from './TokenQuota.mjs'
+import { cleanCompletion } from './AutocompleteText.mjs'
 
 const ENABLED = !/^(false|0|off|no)$/i.test(process.env.AI_AUTOCOMPLETE || '')
 const PROJECT_ID = /^[0-9a-f]{24}$/
 const CONSENT_TUTORIAL = 'workbench-consent-release' // set when the user accepts the AI terms
 const MAX_PREFIX = 6000
 const MAX_SUFFIX = 2000
-const MAX_LENGTH = 160
 let thinkingSwitch = true
 
-const SYSTEM = `You are the inline autocomplete of a LaTeX editor. The user is typing; ‸ marks the cursor.
-Reply with exactly the text to insert at ‸ — nothing else: no explanation, no quotes, no code fences, no text that is already before or after ‸.
-- Continue naturally: finish the current word, LaTeX command, argument or sentence. One line at most, ideally under 15 words.
-- Spacing is copied verbatim: if ‸ follows a complete word and you start a new word, begin with a space; if ‸ is inside a word, continue the word directly.
-- If ‸ follows the end of a sentence, start the next sentence (with a space); never continue a finished sentence with a comma.
+// Suggestions are only requested at a word boundary (after a space, punctuation,
+// a bracket or $, or at the start of a line): chat models are unreliable about
+// leading spaces, so AutocompleteText.mjs decides the spacing by fixed rules.
+const SYSTEM = `You are the inline autocomplete of a LaTeX editor. The user is typing; ‸ marks the cursor, which is always at the start of a new word.
+Reply with only the text to insert at ‸: no explanation, no quotes, no code fences, no text that is already before or after ‸.
+- Continue naturally: the next words of the sentence, or the LaTeX command or argument being written. One line at most, ideally under 15 words.
+- If ‸ follows the end of a sentence, start the next sentence; never continue a finished sentence with a comma.
 - Match the language, notation and style of the document. Close braces, brackets or $ only if the text after ‸ does not already close them.
 - If nothing useful fits, reply with an empty message.`
 
 function model() {
   return process.env.AI_AUTOCOMPLETE_MODEL || Settings.workbenchAi?.model
-}
-
-// Removes the part of the suggestion that the text after the cursor already has,
-// e.g. a "}" the editor closed automatically.
-function trimSuffixOverlap(text, suffix) {
-  const line = suffix.split('\n')[0]
-  for (let k = Math.min(text.length, line.length, 40); k >= 1; k--) {
-    const overlap = line.slice(0, k)
-    if (text.endsWith(overlap) && (k >= 4 || /^[\]})$]+$/.test(overlap))) {
-      return text.slice(0, -k)
-    }
-  }
-  return text
-}
-
-/** Turns the model's reply into text that can be inserted at the cursor, or ''. */
-export function cleanCompletion(raw, prefix, suffix) {
-  let text = String(raw || '')
-    .replace(/\r/g, '')
-    .replace(/‸/g, '')
-    .replace(/^```[a-z]*\n?/i, '')
-    .replace(/\n?```\s*$/, '')
-  if (text.startsWith('\n')) return '' // shown inline: the suggestion must start on this line
-  text = text.split('\n')[0]
-  if (/\s$/.test(prefix)) text = text.replace(/^[ \t]+/, '')
-  const core = text.trim()
-  if (!core) return ''
-  if (core.length >= 12 && prefix.slice(-400).includes(core)) return '' // repeats earlier text
-  if (/[.!?]\s*$/.test(prefix) && /^[,;:.]/.test(core)) return ''
-  text = trimSuffixOverlap(text, suffix)
-  if (text.length > MAX_LENGTH) {
-    const cut = text.lastIndexOf(' ', MAX_LENGTH)
-    text = text.slice(0, cut > 40 ? cut : MAX_LENGTH)
-  }
-  return text.trimEnd()
 }
 
 async function hasConsent(userId) {

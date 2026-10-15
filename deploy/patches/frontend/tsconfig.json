@@ -1,0 +1,16 @@
+{
+  // Editor-only (VS Code): lets the patched files open without errors for imports
+  // that exist only in the Overleaf image (see editor-types/). Not used by the
+  // build or by deploy/frontend/typecheck.sh, which checks against the real sources.
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": []
+  },
+  "include": ["workbench/js/codemirror/**/*", "editor-types/*.d.ts"]
+}

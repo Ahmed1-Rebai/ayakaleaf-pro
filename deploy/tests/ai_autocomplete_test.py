@@ -34,18 +34,20 @@ def complete(prefix, suffix=TAIL, session=s, project=pid):
     return r.status_code, body.get("completion"), elapsed
 
 
-code, text, t = complete(HEAD + "Deep learning has transformed natural language processing. In this paper, we")
-check("end of a word: suggestion starts with a space", code == 200 and bool(text) and text.startswith(" ") and not text.startswith("  "), f"{t:.2f}s {text!r}")
-code, text, t = complete(HEAD + "Deep learning has transformed natural language processing. In this paper, we ")
-check("after a space: no double space", code == 200 and bool(text) and not text[0].isspace(), f"{t:.2f}s {text!r}")
-code, text, t = complete(HEAD + "Deep learning has transfor")
-check("inside a word: continues the word", code == 200 and bool(text) and text[0].isalpha(), f"{t:.2f}s {text!r}")
-code, text, t = complete(HEAD + "Einstein showed that $E = m", "$." + TAIL)
-check("auto-closed $ after the cursor is not repeated", code == 200 and bool(text) and not text.rstrip().endswith("$"), f"{t:.2f}s {text!r}")
-code, text, t = complete(HEAD + "Transformers are now the state of the art in machine translation.")
-check("after a full stop: a new sentence, not ', ...'", code == 200 and (not text or (text.startswith(" ") and text.strip()[0].isupper())), f"{t:.2f}s {text!r}")
-code, text, t = complete(HEAD + "Dans ce travail, nous proposons une méthode")
-check("follows the document's language", code == 200 and bool(text), f"{t:.2f}s {text!r}")
+# Suggestions are made at word boundaries; spacing follows fixed rules.
+for prefix in ("Large language models are ", "Deep learning has transformed NLP. In this paper, we ", "Dans ce travail, nous proposons une méthode "):
+    code, text, t = complete(HEAD + prefix)
+    check(f"after a space ({prefix.split()[-1]!r}): a suggestion, no extra space", code == 200 and bool(text) and not text[0].isspace(), f"{t:.2f}s {text!r}")
+for prefix in ("Transformers, which rely on attention,", "Transformers are now the state of the art in machine translation."):
+    code, text, t = complete(HEAD + prefix)
+    check(f"after {prefix[-1]!r}: one space, no ', ...' continuation", code == 200 and (not text or (text.startswith(" ") and not text.startswith("  ") and text.strip()[0] not in ",;:.")), f"{t:.2f}s {text!r}")
+code, text, t = complete(HEAD + "Einstein showed that $E = ", "$." + TAIL)
+check("inside math: auto-closed $ after the cursor is not repeated", code == 200 and bool(text) and not text.rstrip().endswith("$") and not text[0].isspace(), f"{t:.2f}s {text!r}")
+code, text, t = complete(HEAD.replace("\\section{Introduction}\n", "") + "\\section{", "}" + TAIL)
+check("inside \\section{}: no space, no repeated }", code == 200 and bool(text) and not text[0].isspace() and not text.endswith("}"), f"{t:.2f}s {text!r}")
+for prefix in ("In this paper, we", "Deep learning has transfor", "Large language models are"):
+    code, text, t = complete(HEAD + prefix)
+    check(f"inside or right after a word ({prefix.split()[-1]!r}): no suggestion", code == 200 and text == "", f"{text!r}")
 check("median latency under 1 s", times and statistics.median(times) < 1.0, f"median {statistics.median(times):.2f}s over {len(times)} requests" if times else "")
 
 check("invalid project id -> 400", complete(HEAD + "x", project="nope")[0] == 400)

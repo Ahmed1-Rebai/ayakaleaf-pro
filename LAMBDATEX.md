@@ -111,7 +111,7 @@ document, attach it in the chat and ask (e.g. "insert my photo at the bottom"): 
 saves it into the project under `images/` and includes it.
 
 While you type in a `.tex` file, **AI autocomplete** suggests how to continue the line as grey
-text: **Tab** accepts it, **Esc** dismisses it, and typing the same characters keeps the rest.
+text when you pause after a space or punctuation (not in the middle of a word): **Tab** accepts it, **Esc** dismisses it, and typing the same characters keeps the rest.
 It stays quiet inside `\cite{}`/`\ref{}`/file arguments and command names (Overleaf's own
 completion handles those) and in the Visual editor. Turn it off in **Settings → Editor → AI
 autocomplete**.

@@ -40,6 +40,7 @@ services:
       - /home/user/lambdatex/deploy/patches/workbench/ConversationController.mjs:/overleaf/services/web/modules/workbench/app/src/ConversationController.mjs:ro
       # Server-side: AI autocomplete in the editor
       - /home/user/lambdatex/deploy/patches/workbench/AutocompleteController.mjs:/overleaf/services/web/modules/workbench/app/src/AutocompleteController.mjs:ro
+      - /home/user/lambdatex/deploy/patches/workbench/AutocompleteText.mjs:/overleaf/services/web/modules/workbench/app/src/AutocompleteText.mjs:ro
       # Server-side: choose the TeX engine each compile needs (deploy/patches/compile/)
       - /home/user/lambdatex/deploy/patches/compile/CompileManager.mjs:/overleaf/services/web/app/src/Features/Compile/CompileManager.mjs:ro
       - /home/user/lambdatex/deploy/patches/compile/CompilerAutoSelect.mjs:/overleaf/services/web/app/src/Features/Compile/CompilerAutoSelect.mjs:ro

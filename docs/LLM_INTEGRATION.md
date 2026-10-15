@@ -179,12 +179,23 @@ Inline suggestions in the source editor (grey ghost text; Tab accepts, Esc dismi
   0.15 s; with thinking on it used all its tokens on reasoning and returned nothing. If a
   gateway rejects that option it is dropped automatically.
 * **Prompt:** the text before and after the cursor (3,000 / 1,000 characters) with a cursor
-  mark; one line at most, verbatim spacing, same language as the document. The reply is
-  cleaned: no repeated text, no duplicate of an auto-closed `}`/`$`, no double space, one line.
+  mark; one line at most, same language as the document.
+* **Word boundaries only:** suggestions are made after a space, punctuation, a bracket or `$`,
+  or at the start of a line, never inside or right after a word. A chat model can't be trusted
+  to say whether its text continues a word or starts a new one: measured on Qwen3.6, plain
+  replies dropped the space before a new word ("are" + "powerful" → "arepowerful"), an
+  explicit `space` flag was wrong about 1 time in 10, asking for the word at the cursor gave
+  the wrong word, and plain text completion broke mid-word. At a boundary the spacing is fixed
+  by rules (`AutocompleteText.mjs`): none after whitespace, an opening bracket, `$`, `~`, `-`,
+  `/` or `'`; one space after `.`, `,`, `;`, `:`, `!`, `?` or a closing bracket when a word
+  follows. The reply is also cleaned: no repeated text, no duplicate of an auto-closed `}`/`$`,
+  no comma after a finished sentence, one line.
 * **Editor:** a CodeMirror extension (`deploy/patches/frontend/workbench/js/codemirror/
   ai-autocomplete.ts`) asks 450 ms after you stop typing, at the end of a line, in LaTeX
   files, in Code mode. It skips command names and `\cite`/`\ref`/`\label`/file arguments,
-  waits while Overleaf's completion list or a snippet is active, and cancels the request as
-  soon as you type again.
-* **Settings:** Settings → Editor → AI autocomplete (per browser). `AI_AUTOCOMPLETE=false`
-  turns the endpoint off; `AI_AUTOCOMPLETE_MODEL` uses another model on the same gateway.
+  waits while Overleaf's completion list or a snippet is active or IME input is being
+  composed, and cancels the request as soon as you type again. A suggestion survives edits
+  elsewhere in the document (e.g. a collaborator's); after a 429 (rate limit or quota) it
+  waits a minute before asking again.
+* **Settings:** Settings → Editor → AI autocomplete (per browser). `AI_AUTOCOMPLETE=true` is
+  set in `.env` (also the default); `false` turns the endpoint off; `AI_AUTOCOMPLETE_MODEL` uses another model on the same gateway.

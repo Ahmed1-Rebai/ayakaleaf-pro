@@ -57,11 +57,15 @@ with sync_playwright() as p:
     b = p.chromium.launch(); pg = b.new_page(viewport={"width": 1500, "height": 950})
     pg.goto(B + "/login"); pg.fill('input[name="email"]', EMAIL); pg.fill('input[name="password"]', PW)
     pg.click('button[type="submit"]'); pg.wait_for_url("**/project")
+    # a second browser session (same account), used as a collaborator
+    ctx2 = b.new_context(viewport={"width": 1200, "height": 800}); login2 = ctx2.new_page()
+    login2.goto(B + "/login"); login2.fill('input[name="email"]', EMAIL); login2.fill('input[name="password"]', PW)
+    login2.click('button[type="submit"]'); login2.wait_for_url("**/project"); login2.close()
     pg.goto(f"{B}/project/{pid}"); pg.wait_for_selector(".cm-content", timeout=120000); time.sleep(4)
 
     # ---------- suggestion appears, Tab accepts
     put_cursor_on_empty_line(pg)
-    pg.keyboard.type("In this paper, we", delay=40)
+    pg.keyboard.type("In this paper, we ", delay=40)
     t0 = time.time(); g = wait_ghost(pg); shown_after = time.time() - t0
     check("ghost text appears after a pause in typing", bool(g), f"{shown_after:.1f}s {g!r}")
     pg.screenshot(path=os.path.join(OUT, "autocomplete-ghost.png"))
@@ -69,18 +73,18 @@ with sync_playwright() as p:
     check("the document is unchanged while the suggestion is shown", g is not None and g not in before)
     pg.keyboard.press("Tab"); time.sleep(0.5)
     after = doc_text(pg)
-    check("Tab inserts the suggestion", g is not None and ("In this paper, we" + g) in after and ghost(pg) is None)
+    check("Tab inserts the suggestion", g is not None and ("In this paper, we " + g) in after and ghost(pg) is None)
 
     # ---------- Esc dismisses, document unchanged
     pg.keyboard.press("End"); pg.keyboard.press("Enter"); pg.keyboard.press("Enter")
-    pg.keyboard.type("Our experiments show that", delay=40)
+    pg.keyboard.type("Our experiments show that ", delay=40)
     g = wait_ghost(pg)
     before = doc_text(pg)
     pg.keyboard.press("Escape"); time.sleep(0.4)
     check("Esc dismisses the suggestion and changes nothing", bool(g) and ghost(pg) is None and doc_text(pg) == before, f"{g!r}")
 
     # ---------- typing the suggested characters keeps the rest
-    pg.keyboard.type(" the proposed", delay=40)
+    pg.keyboard.type("the proposed ", delay=40)
     g = wait_ghost(pg)
     kept = None
     if g and len(g.lstrip()) > 3:
@@ -89,6 +93,24 @@ with sync_playwright() as p:
         kept = ghost(pg)
     check("typing the suggested characters keeps the rest of it", bool(kept) and g.startswith(first) and kept == g[len(first):], f"{g!r} -> {kept!r}")
     pg.keyboard.press("Escape")
+
+    # ---------- a collaborator's edit elsewhere keeps the suggestion
+    pg.keyboard.press("End"); pg.keyboard.press("Enter")
+    pg.keyboard.type("Large language models are ", delay=40)
+    g = wait_ghost(pg)
+    other = ctx2.new_page(); other.goto(f"{B}/project/{pid}"); other.wait_for_selector(".cm-content", timeout=120000); time.sleep(3)
+    other.locator(".cm-content .cm-line").first.click(); other.keyboard.press("Home")
+    other.keyboard.type("% note from a collaborator\n", delay=30); time.sleep(3)
+    remote_seen = "note from a collaborator" in doc_text(pg)
+    check("a collaborator's edit elsewhere keeps the suggestion", bool(g) and remote_seen and ghost(pg) == g, f"remote edit seen: {remote_seen}, ghost: {g!r} -> {ghost(pg)!r}")
+    other.close()
+    pg.keyboard.press("Escape")
+
+    # ---------- no suggestion right after a word (only at word boundaries)
+    pg.keyboard.press("End"); pg.keyboard.press("Enter")
+    pg.keyboard.type("In this paper we", delay=40); time.sleep(3)
+    check("no suggestion right after a word", ghost(pg) is None)
+    pg.keyboard.press("End"); pg.keyboard.press("Enter")
 
     # ---------- no suggestion inside \\cite{...}
     pg.keyboard.press("End"); pg.keyboard.press("Enter")
@@ -113,7 +135,7 @@ with sync_playwright() as p:
     stored = pg.evaluate("() => localStorage.getItem('lambdatex.aiAutocomplete')")
     pg.keyboard.press("Escape"); time.sleep(0.8)
     put_cursor_on_empty_line(pg)
-    pg.keyboard.type("Transformers are widely used because", delay=40); time.sleep(3.5)
+    pg.keyboard.type("Transformers are widely used because ", delay=40); time.sleep(3.5)
     check("switched off in Settings: no suggestions", stored == "off" and ghost(pg) is None, f"stored={stored}")
 
     # ---------- normal Tab when there is no suggestion
