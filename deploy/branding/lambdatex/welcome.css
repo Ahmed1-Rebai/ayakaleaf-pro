@@ -1,0 +1,243 @@
+/*
+ * LambdaTeX welcome page (deploy/patches/home/index.pug), shown at / to
+ * visitors who are not logged in. Typography and colours follow lambdatex.css;
+ * buttons are the site's own.
+ */
+
+.lt-welcome {
+  --lt-w-ink: #0f172a;
+  --lt-w-text: #475569;
+  --lt-w-line: #e2e8f0;
+  --lt-w-rule: #cbd5e1;
+  --lt-w-band: #f6f8fb;
+  --lt-w-overlap: 200px; /* how far the hero screenshot reaches into the next section */
+  background: #fff;
+  color: var(--lt-w-text);
+  font-family: var(--font-sans, "Inter", system-ui, sans-serif);
+}
+
+.lt-welcome.content {
+  padding-bottom: 0;
+}
+
+.lt-welcome h1,
+.lt-welcome h2 {
+  color: var(--lt-w-ink);
+  font-family: inherit;
+  text-wrap: balance;
+}
+
+.lt-welcome .btn-lg {
+  min-width: 150px;
+}
+
+/* ------------------------------------------------------------------ hero */
+
+.lt-hero {
+  padding-top: 48px;
+}
+
+.lt-hero-text {
+  max-width: 760px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.lt-hero h1 {
+  margin: 0 0 20px;
+  font-size: clamp(2.25rem, 4.4vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+
+.lt-lead {
+  max-width: 640px;
+  margin: 0 auto 32px;
+  font-size: 1.1875rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.lt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.lt-shot {
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 12px;
+  background: #0f1524;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 30px 60px -30px rgba(15, 23, 42, 0.35);
+}
+
+.lt-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.lt-shot-hero {
+  position: relative;
+  z-index: 1;
+  max-width: 1160px;
+  margin: 64px auto calc(-1 * var(--lt-w-overlap));
+}
+
+/* -------------------------------------------------------------- overview */
+
+.lt-overview {
+  padding: calc(var(--lt-w-overlap) + 72px) 0 88px;
+  border-bottom: 1px solid var(--lt-w-line);
+  background: var(--lt-w-band);
+}
+
+.lt-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 48px;
+  max-width: 1160px;
+  margin: 0 auto;
+}
+
+.lt-column {
+  padding-top: 20px;
+  border-top: 1px solid var(--lt-w-rule);
+}
+
+.lt-column h2 {
+  margin: 0 0 8px;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.lt-column p {
+  margin: 0;
+  font-size: 0.975rem;
+  line-height: 1.65;
+}
+
+/* ------------------------------------------------------------- assistant */
+
+.lt-assistant {
+  padding: 112px 0;
+}
+
+.lt-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 88px;
+  align-items: center;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+.lt-split-text h2 {
+  margin: 0 0 16px;
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+
+.lt-section-lead {
+  margin: 0 0 32px;
+  font-size: 1.0625rem;
+  line-height: 1.65;
+}
+
+.lt-points {
+  margin: 0;
+}
+
+.lt-point {
+  padding: 18px 0;
+  border-top: 1px solid var(--lt-w-line);
+}
+
+.lt-point:last-child {
+  border-bottom: 1px solid var(--lt-w-line);
+}
+
+.lt-point dt {
+  margin-bottom: 4px;
+  color: var(--lt-w-ink);
+  font-weight: 600;
+}
+
+.lt-point dd {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.lt-shot-panel {
+  width: 100%;
+  max-width: 320px;
+  justify-self: center;
+}
+
+/* ---------------------------------------------------------------- access */
+
+.lt-access {
+  padding: 0 0 112px;
+}
+
+.lt-access-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 40px 48px;
+  border: 1px solid var(--lt-w-line);
+  border-radius: 16px;
+  background: var(--lt-w-band);
+}
+
+.lt-access h2 {
+  margin: 0 0 6px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.lt-access p {
+  max-width: 560px;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.lt-access .lt-actions {
+  flex: none;
+}
+
+/* ------------------------------------------------------------ responsive */
+
+@media (max-width: 991.98px) {
+  .lt-welcome { --lt-w-overlap: 96px; }
+  .lt-shot-hero { margin-top: 48px; }
+  .lt-columns { grid-template-columns: minmax(0, 1fr); gap: 28px; max-width: 640px; }
+  .lt-assistant { padding: 88px 0; }
+  .lt-split { grid-template-columns: minmax(0, 1fr); gap: 48px; max-width: 640px; }
+  .lt-access-inner { flex-direction: column; align-items: flex-start; padding: 32px 28px; }
+}
+
+@media (max-width: 575.98px) {
+  .lt-welcome { --lt-w-overlap: 40px; }
+  .lt-hero { padding-top: 24px; }
+  .lt-lead { font-size: 1.0625rem; }
+  .lt-shot-hero { margin-top: 40px; border-radius: 8px; }
+  .lt-overview { padding-bottom: 64px; }
+  .lt-assistant { padding: 72px 0; }
+  .lt-access { padding-bottom: 72px; }
+  .lt-actions { width: 100%; }
+  .lt-actions .btn { flex: 1 1 auto; }
+}

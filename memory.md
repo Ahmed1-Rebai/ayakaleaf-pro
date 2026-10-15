@@ -60,6 +60,10 @@
   once if the log names another engine. Preference xelatex > lualatex (LuaLaTeX rebuilds its font
   cache, ~35 s, in each compile container: TEXMFVAR is in a 64 MB /tmp tmpfs).
   The agent prompt says not to use set_compiler for engine errors; the compile tool returns `compiler`.
+- Welcome page: `deploy/patches/home/` (HomeController + StaticPagesRouter patches, `index.pug`).
+  CE's global login whitelist is exact-path, so `/` and `/home` are added there. Style is deliberately
+  plain (user rejected the gradient/pill/mock-up look as "vibe coded"): real screenshots from
+  `deploy/branding/tools/welcome_screenshots.py`, the site's own buttons, no animation.
 - API tests must replay reasoning like the browser does; real UI checks need the Playwright
   browser test (`deploy/tests/browser/`).
 

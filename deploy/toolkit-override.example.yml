@@ -42,6 +42,10 @@ services:
       - /home/user/lambdatex/deploy/patches/compile/CompileManager.mjs:/overleaf/services/web/app/src/Features/Compile/CompileManager.mjs:ro
       - /home/user/lambdatex/deploy/patches/compile/CompilerAutoSelect.mjs:/overleaf/services/web/app/src/Features/Compile/CompilerAutoSelect.mjs:ro
       - /home/user/lambdatex/deploy/patches/compile/CompilerDetection.mjs:/overleaf/services/web/app/src/Features/Compile/CompilerDetection.mjs:ro
+      # Welcome page for visitors who are not logged in (deploy/patches/home/)
+      - /home/user/lambdatex/deploy/patches/home/HomeController.mjs:/overleaf/services/web/app/src/Features/StaticPages/HomeController.mjs:ro
+      - /home/user/lambdatex/deploy/patches/home/StaticPagesRouter.mjs:/overleaf/services/web/app/src/Features/StaticPages/StaticPagesRouter.mjs:ro
+      - /home/user/lambdatex/deploy/patches/home/index.pug:/overleaf/services/web/app/views/external/home/index.pug:ro
       # Rebuilt editor frontend (deploy/frontend/build.sh): saved conversations UI
       - /home/user/lambdatex/deploy/frontend/dist/js:/overleaf/services/web/public/js:ro
       - /home/user/lambdatex/deploy/frontend/dist/stylesheets:/overleaf/services/web/public/stylesheets:ro

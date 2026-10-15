@@ -22,3 +22,12 @@ cp out/* ../lambdatex/
 `render.html` reuses the website's light/dark scene presets
 (`apps/web/src/components/lambda-hero/lambda-scene.ts`). `jobs-final.json` holds the
 still-image tuning: lower exposure and ambient, and less star glow so the sparkles stay navy.
+
+## Welcome page screenshots
+
+`welcome_screenshots.py` makes `welcome-editor.webp` and `welcome-assistant.webp` from a real
+session: it uploads a demo project (textbook notes on linear regression), asks the AI assistant
+for a small edit and a compile, captures the editor and the assistant panel at 2x, converts them
+to WebP in the browser, and deletes the project and its conversation. Run it in the Playwright
+image like the browser tests, with `-e OUT=/out` and a mounted output folder, and review the
+images before copying them into `../lambdatex/` (then bump `?v=` in `deploy/patches/home/index.pug`).

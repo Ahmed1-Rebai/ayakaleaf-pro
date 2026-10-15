@@ -1,0 +1,106 @@
+//- LambdaTeX welcome page for visitors who are not logged in.
+//- Mounted as app/views/external/home/index.pug; the patched HomeController.mjs
+//- renders it at / and /home. Styles: /img/lambdatex/welcome.css. Both images
+//- are real captures (deploy/branding/tools/welcome_screenshots.py).
+extends ../../layout-website-redesign
+
+block vars
+	- isWebsiteRedesign = true
+	- showThinFooter = true
+
+block append meta
+	link(rel='stylesheet' href='/img/lambdatex/welcome.css?v=2')
+
+block content
+	main#main-content.content.lt-welcome
+		section.lt-hero
+			.container
+				.lt-hero-text
+					h1 Collaborative LaTeX for the LAMBDA lab
+					p.lt-lead
+						| Write papers, theses and reports together in the browser, with a complete
+						| TeX Live 2026 installation and an AI assistant that edits and compiles
+						| your project with you.
+					.lt-actions
+						a.btn.btn-primary.btn-lg(href='/login') Log in
+						a.btn.btn-secondary.btn-lg(href='/register') Request an account
+				figure.lt-shot.lt-shot-hero
+					img(
+						src='/img/lambdatex/welcome-editor.webp?v=1'
+						width='1440'
+						height='1000'
+						alt='The LambdaTeX editor, with the AI assistant next to the LaTeX source and the compiled PDF'
+						fetchpriority='high'
+					)
+
+		section.lt-overview
+			.container
+				.lt-columns
+					.lt-column
+						h2 Real-time collaboration
+						p
+							| Invite co-authors to a project and edit the same document at the same
+							| time. Every change is kept in the project history.
+					.lt-column
+						h2 Complete TeX Live 2026
+						p
+							| Every package and about 13,000 fonts are installed. pdfLaTeX, XeLaTeX
+							| or LuaLaTeX is selected automatically from your preamble.
+					.lt-column
+						h2 Hosted by the lab
+						p
+							| Projects are stored on LAMBDA's servers, and the AI assistant is served
+							| through the lab's own model gateway.
+
+		section.lt-assistant
+			.container
+				.lt-split
+					.lt-split-text
+						h2 An assistant that works inside your project
+						p.lt-section-lead
+							| Describe what you need in plain language. The assistant reads the
+							| relevant files, makes the change and compiles to check the result.
+						dl.lt-points
+							.lt-point
+								dt Every change can be reviewed
+								dd
+									| Edits appear as diffs to apply or reject. In Auto mode they are applied
+									| directly, and each one can be undone.
+							.lt-point
+								dt Compile errors, explained
+								dd
+									| Errors come with a Suggest fix button, and the assistant can correct
+									| the cause and compile again.
+							.lt-point
+								dt Conversations are kept
+								dd
+									| Each project keeps its conversations, so you can return to them,
+									| rename them or delete them.
+							.lt-point
+								dt Images from the chat
+								dd
+									| Attach a photo or a figure, and the assistant adds it to the project
+									| and places it in the document.
+					figure.lt-shot.lt-shot-panel
+						img(
+							src='/img/lambdatex/welcome-assistant.webp?v=2'
+							width='279'
+							height='728'
+							alt='The AI assistant panel showing a request, the proposed change with Undo, and a successful compile'
+							loading='lazy'
+							decoding='async'
+						)
+
+		section.lt-access
+			.container
+				.lt-access-inner
+					.lt-access-text
+						h2 Access LambdaTeX
+						p
+							| Sign in with your LambdaTeX account. Accounts are created by the lab.
+							if settings.adminEmail
+								| #{' '}To request one, write to#{' '}
+								a(href='mailto:' + settings.adminEmail)= settings.adminEmail
+								| .
+					.lt-actions
+						a.btn.btn-primary.btn-lg(href='/login') Log in

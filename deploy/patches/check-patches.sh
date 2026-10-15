@@ -21,5 +21,7 @@ done <<'LIST'
 /overleaf/services/web/modules/workbench/frontend/js/workbench.css 81a0fa832dee74f45487a7b09b7f2106aa3dfd48218a84071b922983f566f6cc
 /overleaf/services/web/app/src/Features/Compile/CompileManager.mjs c3d6606943f23261eac42dc5e5d9c2b5eaa3a393dc3bd953ff57cedd8d9bb5a0
 /overleaf/services/web/modules/workbench/frontend/js/hooks/use-file-actions.ts 29e7633c3020ae6862c762c852fb8f257121d721e85e2c3aadd70dfb41f5ee0d
+/overleaf/services/web/app/src/Features/StaticPages/HomeController.mjs e1133f1fd5e3e788cb0a0fae659f4829c894ea1b8e8eab27282ab12b2aedf836
+/overleaf/services/web/app/src/Features/StaticPages/StaticPagesRouter.mjs 82cc6c2f2b512963e66601f608ea862e55279023889498caf82357d051c1b9fc
 LIST
 exit $status

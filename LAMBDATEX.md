@@ -96,6 +96,10 @@ verified in the Brevo account.
 
 ## Usage
 
+Visitors who are not logged in get a welcome page at `/`, with **Log in** and **Request an
+account**. Every other page still requires login, and logged-in users go straight to their
+projects. `WELCOME_PAGE=false` in `.env` restores the redirect to the login page.
+
 Create a project from the dashboard, edit it, and press **Recompile**. Download the PDF, or
 the source with **Menu → Download → Source (zip)**. The editor has an AI chat panel, and
 compile errors get a **Suggest fix** button. The switch under the chat prompt chooses how
@@ -133,6 +137,7 @@ keep the engine you chose.
 | Conversations button missing after an upgrade or rebuild | The frontend override isn't mounted or is stale: run `deploy/frontend/build.sh`, then `bin/docker-compose up -d --force-recreate sharelatex`. |
 | Compile uses an engine you don't want | Put `% !TEX program = <engine>` on the first line of the main file. To turn automatic choice off, set `AUTO_COMPILER=false` in `.env` and recreate the container. `bin/logs web \| grep -i "compiler chosen\|another engine"` shows each switch and its reason. |
 | LuaLaTeX compiles take ~35 s | LuaLaTeX rebuilds its font cache in every new compile container. Prefer XeLaTeX unless the document needs Lua. |
+| `/` still redirects to the login page | The welcome-page mounts (`deploy/patches/home/`) are missing, or the container wasn't recreated after editing `index.pug` (templates are compiled at start-up): `bin/docker-compose up -d --force-recreate sharelatex`. |
 | Theme change not visible | Bump `?v=N` in `deploy/branding/nginx/lambdatex-branding.conf`, then run `docker exec sharelatex nginx -s reload`. |
 
 ## Credits and licence

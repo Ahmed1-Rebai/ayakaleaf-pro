@@ -79,6 +79,13 @@ Checked with headless Chromium (Playwright) screenshots at 1440×900, and at 390
 | `ai_app_test.py`: chat LaTeX generation | ✅ PASS | reasoning → text stream, correct `tabular`, 1.4 s |
 | `ai_agentic_test.py`: agentic editing | ✅ PASS | `read_current_file` → `replace_lines` (lines 5–7) → `compile`: 0 errors → summary. This first version didn't replay reasoning, so it missed the browser failure below |
 
+## Welcome page (2026-10-15)
+
+| Test | Result |
+|---|---|
+| `browser/welcome_page_test.py`: `/` shows the page without a redirect at 1440, 820 and 390 px wide; navbar visible; screenshots load; no horizontal scroll; no console errors; Log in → `/login`; Request an account → `/register`; logo on the login page → welcome page; `/project` still requires login; logged-in users go from `/` to `/project` | ✅ 20/20 |
+| Other paths still redirect to `/login` when logged out (`/project`, `/admin/user`, `/learn`, a project URL) | ✅ |
+
 ## Automatic TeX engine (2026-10-15)
 
 | Test | Result |
