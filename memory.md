@@ -64,6 +64,9 @@
   CE's global login whitelist is exact-path, so `/` and `/home` are added there. Style is deliberately
   plain (user rejected the gradient/pill/mock-up look as "vibe coded"): real screenshots from
   `deploy/branding/tools/welcome_screenshots.py`, the site's own buttons, no animation.
+  The access box points to https://lambdalab.org/ (the lab's services are managed there); `/register`
+  still shows the admin email. Short pages: body is a flex column (thin footer) so the footer sits
+  at the bottom; don't reintroduce fixed `min-height` values on `main`.
 - API tests must replay reasoning like the browser does; real UI checks need the Playwright
   browser test (`deploy/tests/browser/`).
 

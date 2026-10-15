@@ -299,7 +299,6 @@ html .loading-screen .loading-screen-brand {
 /* ------------------------------------- sign-in, account and other pages */
 
 html body.website-redesign main.content-alt {
-  min-height: calc(100vh - 150px);
   background:
     radial-gradient(1100px 620px at 10% -12%, var(--lt-glow-1), transparent 62%),
     radial-gradient(900px 560px at 100% 0%, var(--lt-glow-2), transparent 60%),
@@ -579,6 +578,24 @@ html footer.site-footer ul.site-footer-items > li > strong.text-muted {
   font-size: 0;
   opacity: 0.55;
   vertical-align: middle;
+}
+
+/* Short pages (sign-in, register, welcome): the page fills the window and the
+   footer sits at the bottom, whatever its height. Upstream sizes .content for a
+   50px footer; with the disclaimer row hidden ours is ~60px. */
+html body.thin-footer:has(> main.content) {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+html body.thin-footer > main.content {
+  flex: 1 0 auto;
+  min-height: 0;
+}
+
+html body.thin-footer > footer.site-footer {
+  flex: none;
 }
 
 /* Upstream's Community Edition disclaimer row is hidden (operator's choice). */

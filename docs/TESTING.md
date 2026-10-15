@@ -85,6 +85,7 @@ Checked with headless Chromium (Playwright) screenshots at 1440×900, and at 390
 |---|---|
 | `browser/welcome_page_test.py`: `/` shows the page without a redirect at 1440, 820 and 390 px wide; navbar visible; screenshots load; no horizontal scroll; no console errors; Log in → `/login`; Request an account → `/register`; logo on the login page → welcome page; `/project` still requires login; logged-in users go from `/` to `/project` | ✅ 20/20 |
 | Other paths still redirect to `/login` when logged out (`/project`, `/admin/user`, `/learn`, a project URL) | ✅ |
+| Footer flush with the bottom of the window on `/login`, `/register` and `/` at 1920, 1440 and 390 px (was an 89 px gap under the login footer); sign-in pages no longer scroll | ✅ |
 
 ## Automatic TeX engine (2026-10-15)
 

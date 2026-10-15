@@ -98,9 +98,8 @@ block content
 						h2 Access LambdaTeX
 						p
 							| Sign in with your LambdaTeX account. Accounts are created by the lab.
-							if settings.adminEmail
-								| #{' '}To request one, write to#{' '}
-								a(href='mailto:' + settings.adminEmail)= settings.adminEmail
-								| .
+							| #{' '}To request one, use your account on#{' '}
+							a(href='https://lambdalab.org/') lambdalab.org
+							| .
 					.lt-actions
 						a.btn.btn-primary.btn-lg(href='/login') Log in
