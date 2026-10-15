@@ -45,7 +45,9 @@
   `lambdatex.aiEditMode`). Auto clicks the app's own Apply on new two-button suggestion
   cards (`.workbench-code-suggestion`), one at a time, by content fingerprint.
 - `deploy/patches/workbench/WorkbenchTools.mjs` (single-file mount) drops earlier reasoning
-  from chat history: Groq rejects `reasoning_content`. Run `deploy/patches/check-patches.sh`
+  from chat history: Groq rejects `reasoning_content`. `WorkbenchController.mjs` +
+  new `AttachedImageTool.mjs` add `save_attached_image` (dynamic tool; project from Referer;
+  write access checked) so attached photos become project files. Run `deploy/patches/check-patches.sh`
   after any image change; recreate the container after editing a patch.
 - API tests must replay reasoning like the browser does; real UI checks need the Playwright
   browser test (`deploy/tests/browser/`).

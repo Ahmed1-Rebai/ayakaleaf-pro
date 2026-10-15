@@ -31,3 +31,6 @@ services:
       - /home/user/lambdatex/deploy/scripts:/overleaf/services/web/modules/server-ce-scripts/scripts/lambdatex:ro
       # Server-side patch: drop earlier reasoning from AI chat history (deploy/patches/README.md)
       - /home/user/lambdatex/deploy/patches/workbench/WorkbenchTools.mjs:/overleaf/services/web/modules/workbench/app/src/WorkbenchTools.mjs:ro
+      # Server-side patch: save images attached in the AI chat into the project
+      - /home/user/lambdatex/deploy/patches/workbench/WorkbenchController.mjs:/overleaf/services/web/modules/workbench/app/src/WorkbenchController.mjs:ro
+      - /home/user/lambdatex/deploy/patches/workbench/AttachedImageTool.mjs:/overleaf/services/web/modules/workbench/app/src/AttachedImageTool.mjs:ro

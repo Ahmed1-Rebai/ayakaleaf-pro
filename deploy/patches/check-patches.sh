@@ -14,5 +14,6 @@ while read -r path sum; do
   fi
 done <<'LIST'
 /overleaf/services/web/modules/workbench/app/src/WorkbenchTools.mjs 6e040abc96627547849c8a6338efb329f8f1025c07f44eb8746c07145bdc3b04
+/overleaf/services/web/modules/workbench/app/src/WorkbenchController.mjs 71d81323c48018d07618d36a9435c69493dd51ff4ae418ca82dcff11d3e6c478
 LIST
 exit $status

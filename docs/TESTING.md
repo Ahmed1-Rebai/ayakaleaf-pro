@@ -92,6 +92,8 @@ ended in "Something's gone wrong". Server log: Groq `messages[3].content must be
 | `ai_agentic_test.py` | ✅ PASS |
 | Image attached to a chat (via `/workbench/tex-gpt`, as the browser sends it) | ✅ PASS |
 | ~100k-character document with a `fancyhdr` header: "remove the navbar of the first page" | ✅ PASS: `\thispagestyle{empty}` after `\maketitle`, compiles |
+| "Insert this photo" with an image attached, before the image patch | ❌ the model wrote `\includegraphics{photo.jpg}` for a file that didn't exist: `File 'photo.jpg' not found` |
+| Same with `save_attached_image` (`ai_image_test.py`) | ✅ PASS: saved as `images/chat-image-….png`, referenced by that path, compiles |
 
 ## AI edit mode and reasoning patch (real editor, Playwright)
 

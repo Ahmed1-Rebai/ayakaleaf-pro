@@ -1,0 +1,43 @@
+--- upstream services/web/modules/workbench/app/src/WorkbenchController.mjs (ayaka-notes/ayakaleaf-pro 7e6ffc2)
++++ deploy/patches/workbench/WorkbenchController.mjs (LambdaTeX)
+@@ -13,6 +13,12 @@
+ import { CLIENT_TOOLS, convertWorkbenchMessages } from './WorkbenchTools.mjs'
+ import { WEB_SEARCH_TOOL, isWebSearchConfigured } from './WebSearchTool.mjs'
+ import { DOCS_SEARCH_TOOL, isDocsSearchConfigured } from './DocsSearchTool.mjs'
++// LambdaTeX patch: save images attached in the chat into the project.
++import {
++  attachedImages,
++  projectIdFromReferer,
++  createSaveAttachedImageTool,
++} from './AttachedImageTool.mjs'
+ import { createToolCallLimit } from './ToolCallLimit.mjs'
+ import {
+   isQuotaEnabled,
+@@ -106,6 +112,16 @@
+   const tools = { ...CLIENT_TOOLS }
+   if (webSearch) tools.web_search = WEB_SEARCH_TOOL
+   if (docsSearch) tools.search_documentation = DOCS_SEARCH_TOOL
++  // LambdaTeX patch: offered only when the chat has images and runs in a project.
++  const images = attachedImages(messages)
++  const imageProjectId = projectIdFromReferer(req)
++  if (images.length > 0 && imageProjectId && userId) {
++    tools.save_attached_image = createSaveAttachedImageTool({
++      images,
++      projectId: imageProjectId,
++      userId,
++    })
++  }
+ 
+   // Include instructions for the search tools available in this request.
+   let system = SYSTEM_PROMPT
+@@ -116,6 +132,10 @@
+     system += `\n\nYou have a search_documentation tool that searches the documentation of this Overleaf instance. When the user asks how Overleaf itself works — features, settings, account/project management, administration — call search_documentation and answer from the results, linking the source pages. Prefer it over web_search for questions about Overleaf itself.`
+   }
+ 
++  if (tools.save_attached_image) {
++    system += `\n\nThe user attached ${images.length} image(s) in this chat. You can see them, but they are not project files yet. To use one in the document (for example with \\includegraphics), first call save_attached_image, then reference exactly the path it returns. Never reference an attached image by a file name you made up.`
++  }
++
+   let modelMessages
+   try {
+     modelMessages = await convertWorkbenchMessages(messages)

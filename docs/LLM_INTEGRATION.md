@@ -87,15 +87,18 @@ The gateway's models, tested for what the assistant needs:
 | Chat LaTeX generation | ✅ verified | correct `table`/`tabular`, 2.2 s |
 | Agentic editing (read → replace_lines → compile) | ✅ verified | 0 errors; reasoning replayed like the browser |
 | Image attached to a chat | ✅ verified | colour of an attached PNG identified |
+| "Insert this photo" with an image attached | ✅ verified | `save_attached_image` → `images/chat-image-….png` in the project → `\includegraphics` with that path → compiles (`ai_image_test.py`) |
 | Large document (~100k characters): "remove the navbar of the first page" | ✅ verified | read the file, added `\thispagestyle{empty}` after `\maketitle`, compiles |
 | Edit mode Manual / Auto, editor UI | ✅ verified (2026-10-14) | `deploy/tests/browser/` |
 
 Observations:
 * **Reasoning history.** Earlier reasoning is not sent back to the model (server patch in
   `deploy/patches/`): some gateways reject it, and models don't need it.
-* **Images in chat** let the model *see* a picture. They are not copied into the project: to
-  put a photo in the document, upload it to the project first, then ask the assistant to
-  insert it (it references the file with `\includegraphics`).
+* **Images in chat** let the model see a picture. When it should go into the document (e.g.
+  "insert my photo at the bottom"), the assistant calls `save_attached_image`, which saves
+  the JPEG/PNG into the project (`images/chat-image-<hash>.<ext>`) and returns the path it
+  then uses in `\includegraphics` (server patch in `deploy/patches/`). Other formats must
+  be converted to PNG/JPEG first.
 * **Speed.** Qwen3.6 reasons before answering, so simple chats take 1–3 s and the Error
   Assistant up to ~20 s. gpt-oss on Groq was faster but is capped at 8,000 tokens per minute.
 * **Error Assistant is one-error, one-line.** A typo on two lines (`\begin{itemiz}` and
