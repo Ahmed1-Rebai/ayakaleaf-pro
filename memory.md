@@ -100,7 +100,7 @@
 ## GitHub fork mirror
 - `Ahmed1-Rebai/ayakaleaf-pro` branch `lab/llm-gateway-deploy` = upstream `server-pro` + the
   same deployment commits. To mirror new LambdaTex commits: shallow-clone that branch,
-  replay each commit's `deploy/ docs/ .env.example memory.md` snapshot with its original
+  replay each commit's `deploy/ docs/ integration/ .env.example memory.md` snapshot with its original
   author/dates, keep `LAMBDATEX.md` = this README, then push (fast-forward, no force).
 
 ## Gotchas
