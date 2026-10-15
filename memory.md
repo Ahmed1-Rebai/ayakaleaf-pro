@@ -53,6 +53,13 @@
   controller `onFinish` save) plus frontend patches in `deploy/patches/frontend/`. Rebuild with
   `deploy/frontend/build.sh` (writes `builds/<time>/`, never deletes; `dist` is a symlink to the
   current build); then recreate with `--force-recreate`. Old `builds/` folders are deleted by hand.
+- Automatic TeX engine: `deploy/patches/compile/` (CompileManager patch + `CompilerAutoSelect.mjs` +
+  pure `CompilerDetection.mjs`). Runs before every compile, reads docs through the document
+  updater (incremental compiles only carry changed docs, so ClsiManager can't do it), saves the
+  engine and emits `compilerUpdated`. After a no-PDF compile it reads `output.log` and retries
+  once if the log names another engine. Preference xelatex > lualatex (LuaLaTeX rebuilds its font
+  cache, ~35 s, in each compile container: TEXMFVAR is in a 64 MB /tmp tmpfs).
+  The agent prompt says not to use set_compiler for engine errors; the compile tool returns `compiler`.
 - API tests must replay reasoning like the browser does; real UI checks need the Playwright
   browser test (`deploy/tests/browser/`).
 

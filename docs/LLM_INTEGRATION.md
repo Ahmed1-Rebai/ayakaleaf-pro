@@ -147,3 +147,14 @@ now asks it to read what it needs, make the complete change in as few `replace_l
 as possible, compile and check at most once, then stop and summarise, and to ask the user
 after two failed attempts. `AI_MAX_STEPS=12` caps tool calls per message. On the
 "caption under the image" task: 4 tool calls (read, edit, retry, compile) instead of 20+.
+## TeX engine choice
+
+The server chooses the engine on every compile, including the assistant's `compile` tool
+(`deploy/patches/compile/`, described in `README.md`). For the assistant:
+
+* The system prompt explains the rule: add the package and compile; don't call
+  `set_compiler` for engine errors; use `% !TEX program = …` only when the user asks for an
+  engine; if there's still no PDF, fix the first error; it also lists installed fonts
+  to use when a font is missing.
+* The `compile` and `get_diagnostics` results include `compiler`, the engine the editor
+  now has, so the assistant can say what was used.

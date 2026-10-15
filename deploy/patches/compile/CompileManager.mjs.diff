@@ -1,0 +1,49 @@
+--- CompileManager.mjs.orig	2026-10-15 12:31:24.034707379 +0000
++++ CompileManager.mjs	2026-10-15 12:34:13.730063314 +0000
+@@ -5,6 +5,7 @@
+ import ProjectRootDocManager from '../Project/ProjectRootDocManager.mjs'
+ import UserGetter from '../User/UserGetter.mjs'
+ import ClsiManager from './ClsiManager.mjs'
++import CompilerAutoSelect from './CompilerAutoSelect.mjs'
+ import Metrics from '@overleaf/metrics'
+ import { RateLimiter } from '../../infrastructure/RateLimiter.mjs'
+ import { callbackify, callbackifyMultiResult } from '@overleaf/promise-utils'
+@@ -97,6 +98,9 @@
+     return { message: 'autocompile-backoff', outputFiles: [] }
+   }
+ 
++  // LambdaTeX: compile with the TeX engine the document needs
++  await CompilerAutoSelect.beforeCompile(projectId, userId, project, options)
++
+   // only pass userId down to clsi if this is a per-user compile
+   const compileAsUser = Settings.disablePerUserCompiles ? undefined : userId
+   const {
+@@ -111,12 +115,24 @@
+     clsiCacheShard,
+     baseHistoryVersion,
+     instanceType,
+-  } = await ClsiManager.promises.sendRequest(
+-    project,
++  } = await CompilerAutoSelect.retryWithLogEngine({
+     projectId,
++    userId,
+     compileAsUser,
+-    options
+-  )
++    project,
++    result: await ClsiManager.promises.sendRequest(
++      project,
++      projectId,
++      compileAsUser,
++      options
++    ),
++    // LambdaTeX: once more if the log asks for another engine
++    compileAgain: () =>
++      ClsiManager.promises.sendRequest(project, projectId, compileAsUser, {
++        ...options,
++        buildId: generateBuildId(),
++      }),
++  })
+ 
+   return {
+     status,

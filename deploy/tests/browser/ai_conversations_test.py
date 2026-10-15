@@ -1,7 +1,7 @@
 """Browser test for saved AI conversations (Conversations list, New conversation,
 open, resume after reload, rename, delete). Runs in the Playwright image; see
 README.md here. Creates a project "convui" and deletes it afterwards."""
-import io, os, re, time, zipfile, requests
+import atexit, io, os, re, time, zipfile, requests
 from playwright.sync_api import sync_playwright
 
 B = os.environ.get("OL_URL", "http://127.0.0.1:8001")
@@ -19,6 +19,7 @@ s.post(B + "/login", json={"email": EMAIL, "password": PW}, headers={"X-Csrf-Tok
 s.headers["X-Csrf-Token"] = tok("/project")
 buf = io.BytesIO(); zipfile.ZipFile(buf, "w").writestr("main.tex", "\\documentclass{article}\n\\begin{document}\nHi\n\\end{document}\n")
 pid = s.post(B + "/project/new/upload", files={"qqfile": ("convui.zip", buf.getvalue(), "application/zip")}, data={"name": "convui.zip"}).json()["project_id"]
+atexit.register(lambda: print("cleanup project ->", s.delete(f"{B}/project/{pid}").status_code))  # also after a failure
 
 CLICK_ICON = """([scope, icon]) => { const root = document.querySelector(scope); if (!root) return false;
   const b = [...root.querySelectorAll('button')].find(b => [...b.querySelectorAll('.material-symbols')].some(i => i.textContent.trim() === icon));
@@ -103,5 +104,4 @@ with sync_playwright() as p:
     check("server list empty afterwards", server == [], str(server))
     b.close()
 
-print("cleanup project ->", s.delete(f"{B}/project/{pid}").status_code)
 print("SUMMARY", results, "| all passed:", all(results.values()))

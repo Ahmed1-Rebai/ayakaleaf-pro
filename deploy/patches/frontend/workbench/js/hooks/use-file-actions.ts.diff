@@ -1,0 +1,40 @@
+--- use-file-actions.ts.orig	2026-10-15 12:39:30.256678792 +0000
++++ use-file-actions.ts	2026-10-15 12:39:30.293678864 +0000
+@@ -18,8 +18,10 @@
+ 
+ type CompileState = ReturnType<typeof useDetachCompileContext>
+ 
+-function getCompileDiagnostics(state: CompileState) {
++function getCompileDiagnostics(state: CompileState, compiler: string | null = null) {
+   return {
++    // LambdaTeX: engine of the last compile; the server picks it from the document
++    compiler,
+     compiling: state.compiling,
+     hasUncompiledChanges: state.uncompiled || state.editedSinceCompileStarted,
+     logsReady: Boolean(state.logEntries),
+@@ -56,10 +58,14 @@
+   useEffect(() => {
+     compileStateRef.current = compileState
+   }, [compileState])
+-  const { setCompiler } = useProjectSettingsContext()
++  const { compiler, setCompiler } = useProjectSettingsContext()
++  const compilerRef = useRef(compiler)
++  useEffect(() => {
++    compilerRef.current = compiler
++  }, [compiler])
+ 
+   const readCompileDiagnostics = useCallback(
+-    () => getCompileDiagnostics(compileStateRef.current),
++    () => getCompileDiagnostics(compileStateRef.current, compilerRef.current ?? null),
+     []
+   )
+ 
+@@ -78,7 +84,7 @@
+       signal.throwIfAborted()
+       const current = compileStateRef.current
+       if (!current.compiling && current.logEntries && current.logEntries !== previous.logEntries) {
+-        return getCompileDiagnostics(current)
++        return getCompileDiagnostics(current, compilerRef.current ?? null)
+       }
+     }
+     throw new ToolRejectionError('The new compilation logs are not available yet. Check the compilation panel before retrying.')

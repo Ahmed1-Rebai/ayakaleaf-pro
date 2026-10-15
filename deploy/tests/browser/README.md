@@ -14,5 +14,9 @@ docker run --rm --network host -v "$PWD/deploy/tests/browser:/work" -w /work \
 docker rmi mcr.microsoft.com/playwright/python:v1.55.0-noble
 ```
 
+The same command runs the other browser tests: `ai_conversations_test.py` (saved
+conversations) and `ai_compiler_test.py` (automatic TeX engine through the assistant and the
+Recompile button). Each deletes its project afterwards, also when it fails.
+
 Screenshots go to `/tmp/lambdatex-tests` inside the container (set `LT_TEST_DIR` and
 mount a folder to keep them).

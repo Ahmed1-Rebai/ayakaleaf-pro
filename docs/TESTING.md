@@ -79,6 +79,18 @@ Checked with headless Chromium (Playwright) screenshots at 1440×900, and at 390
 | `ai_app_test.py`: chat LaTeX generation | ✅ PASS | reasoning → text stream, correct `tabular`, 1.4 s |
 | `ai_agentic_test.py`: agentic editing | ✅ PASS | `read_current_file` → `replace_lines` (lines 5–7) → `compile`: 0 errors → summary. This first version didn't replay reasoning, so it missed the browser failure below |
 
+## Automatic TeX engine (2026-10-15)
+
+| Test | Result |
+|---|---|
+| Wrong engine in TeX Live 2026 (`texlive-full:2026.1`): fontspec, polyglossia, ctex, `\RequireXeTeX` give **no PDF** under pdfLaTeX; unicode-math, xeCJK, luacode, luatexja give errors | baseline recorded |
+| `compiler_detection_test.mjs`: magic comments, packages, classes, commands, `\input`/`\import`/local `.sty`/`.cls`/beamer themes, comments and `\iffalse`, engine-conditional templates, conflicts, cycles, log messages | ✅ 50/50 |
+| `compiler_auto_test.py` (real compiles, project set to the wrong engine): fontspec, `\directlua`, ctexart, CV `.cls`, `\input` preamble, magic comment, plain doc keeps XeLaTeX, conditional template keeps pdfLaTeX, log fallback (hidden package name), edit flow | ✅ 11/11 (engine from the log's first line; saved setting checked) |
+| `browser/ai_compiler_test.py`: assistant (Auto) sets Arial with fontspec on a pdfLaTeX project: 3 tool calls, compile reports `xelatex`, no `set_compiler`, no "didn't produce a PDF"; Recompile button with the setting forced back to pdfLaTeX gives a PDF | ✅ 7/7 |
+| Frontend rebuild: same 2 webpack warnings as before | ✅ |
+
+Timing: XeLaTeX/pdfLaTeX compiles take 1–3 s; LuaLaTeX ~36 s (font cache rebuilt in each compile container).
+
 ## Saved conversations and decisiveness (2026-10-15)
 
 | Test | Result |

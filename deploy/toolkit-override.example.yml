@@ -38,6 +38,10 @@ services:
       - /home/user/lambdatex/deploy/patches/workbench/WorkbenchRouter.mjs:/overleaf/services/web/modules/workbench/app/src/WorkbenchRouter.mjs:ro
       - /home/user/lambdatex/deploy/patches/workbench/ConversationStore.mjs:/overleaf/services/web/modules/workbench/app/src/ConversationStore.mjs:ro
       - /home/user/lambdatex/deploy/patches/workbench/ConversationController.mjs:/overleaf/services/web/modules/workbench/app/src/ConversationController.mjs:ro
+      # Server-side: choose the TeX engine each compile needs (deploy/patches/compile/)
+      - /home/user/lambdatex/deploy/patches/compile/CompileManager.mjs:/overleaf/services/web/app/src/Features/Compile/CompileManager.mjs:ro
+      - /home/user/lambdatex/deploy/patches/compile/CompilerAutoSelect.mjs:/overleaf/services/web/app/src/Features/Compile/CompilerAutoSelect.mjs:ro
+      - /home/user/lambdatex/deploy/patches/compile/CompilerDetection.mjs:/overleaf/services/web/app/src/Features/Compile/CompilerDetection.mjs:ro
       # Rebuilt editor frontend (deploy/frontend/build.sh): saved conversations UI
       - /home/user/lambdatex/deploy/frontend/dist/js:/overleaf/services/web/public/js:ro
       - /home/user/lambdatex/deploy/frontend/dist/stylesheets:/overleaf/services/web/public/stylesheets:ro

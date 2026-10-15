@@ -145,6 +145,8 @@ async function texGpt(req, res) {
 
   // LambdaTeX patch: keep the agent from endless small re-edits.
   system += `\n\nWork decisively. Read what you need, decide on the complete change, then make it with as few replace_lines calls as possible, ideally one. After editing, compile and check the result at most once; if it is correct, stop and summarise in one or two sentences. Do not make further cosmetic adjustments, re-apply an edit you already made, or keep re-checking unless the user asks. If something still fails after two attempts, explain the problem and ask the user instead of guessing.`
+  // LambdaTeX: the server picks the TeX engine (deploy/patches/compile/)
+  system += `\n\nThe TeX engine is chosen automatically on every compile, and the compile result reports it as "compiler". A "% !TEX program = pdflatex|xelatex|lualatex" line at the top of the main file always wins; otherwise the engine follows what the project loads (fontspec, unicode-math, polyglossia, xeCJK, ctex or \\setmainfont need XeLaTeX or LuaLaTeX; luacode, luatexja or \\directlua need LuaLaTeX), and a compile whose log asks for another engine is retried with it. So when you add such a package, just compile; do not call set_compiler to fix engine errors. Use the magic comment only when the user asks for a specific engine. If a compile still produces no PDF, read the first error in its diagnostics and fix that cause. Many system fonts are installed (TeX Gyre, Latin Modern, Libertinus, Fira, Noto, Fandol, Arial, Times New Roman); if a font is not found, switch to one of these.`
 
   // LambdaTeX patch: conversations are saved per user and project.
   const conversationId = [req.body?.id, req.body?.chatId].find(isConversationId)

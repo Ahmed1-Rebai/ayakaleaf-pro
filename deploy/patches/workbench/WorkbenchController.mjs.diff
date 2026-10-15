@@ -1,6 +1,6 @@
---- upstream services/web/modules/workbench/app/src/WorkbenchController.mjs (ayaka-notes/ayakaleaf-pro 7e6ffc2)
-+++ deploy/patches/workbench/WorkbenchController.mjs (LambdaTeX)
-@@ -13,6 +13,12 @@
+--- /tmp/claude-1000/-home-user/c04d9bee-feae-42bd-89bc-ecaaeab0cae9/scratchpad/WorkbenchController.orig.mjs	2026-10-15 12:39:43.441704438 +0000
++++ WorkbenchController.mjs	2026-10-15 12:39:42.949703480 +0000
+@@ -13,6 +13,15 @@
  import { CLIENT_TOOLS, convertWorkbenchMessages } from './WorkbenchTools.mjs'
  import { WEB_SEARCH_TOOL, isWebSearchConfigured } from './WebSearchTool.mjs'
  import { DOCS_SEARCH_TOOL, isDocsSearchConfigured } from './DocsSearchTool.mjs'
@@ -10,27 +10,34 @@
 +  projectIdFromReferer,
 +  createSaveAttachedImageTool,
 +} from './AttachedImageTool.mjs'
++// LambdaTeX patch: save conversations.
++import { isConversationId, saveConversation } from './ConversationStore.mjs'
++import AuthorizationManager from '../../../../app/src/Features/Authorization/AuthorizationManager.mjs'
  import { createToolCallLimit } from './ToolCallLimit.mjs'
  import {
    isQuotaEnabled,
-@@ -106,6 +112,16 @@
+@@ -106,6 +115,20 @@
    const tools = { ...CLIENT_TOOLS }
    if (webSearch) tools.web_search = WEB_SEARCH_TOOL
    if (docsSearch) tools.search_documentation = DOCS_SEARCH_TOOL
 +  // LambdaTeX patch: offered only when the chat has images and runs in a project.
++  const bodyProjectId = req.body?.projectId
++  const projectId =
++    typeof bodyProjectId === 'string' && /^[0-9a-f]{24}$/.test(bodyProjectId)
++      ? bodyProjectId
++      : projectIdFromReferer(req)
 +  const images = attachedImages(messages)
-+  const imageProjectId = projectIdFromReferer(req)
-+  if (images.length > 0 && imageProjectId && userId) {
++  if (images.length > 0 && projectId && userId) {
 +    tools.save_attached_image = createSaveAttachedImageTool({
 +      images,
-+      projectId: imageProjectId,
++      projectId,
 +      userId,
 +    })
 +  }
  
    // Include instructions for the search tools available in this request.
    let system = SYSTEM_PROMPT
-@@ -116,6 +132,10 @@
+@@ -116,6 +139,28 @@
      system += `\n\nYou have a search_documentation tool that searches the documentation of this Overleaf instance. When the user asks how Overleaf itself works — features, settings, account/project management, administration — call search_documentation and answer from the results, linking the source pages. Prefer it over web_search for questions about Overleaf itself.`
    }
  
@@ -38,6 +45,41 @@
 +    system += `\n\nThe user attached ${images.length} image(s) in this chat. You can see them, but they are not project files yet. To use one in the document (for example with \\includegraphics), first call save_attached_image, then reference exactly the path it returns. Never reference an attached image by a file name you made up.`
 +  }
 +
++  // LambdaTeX patch: keep the agent from endless small re-edits.
++  system += `\n\nWork decisively. Read what you need, decide on the complete change, then make it with as few replace_lines calls as possible, ideally one. After editing, compile and check the result at most once; if it is correct, stop and summarise in one or two sentences. Do not make further cosmetic adjustments, re-apply an edit you already made, or keep re-checking unless the user asks. If something still fails after two attempts, explain the problem and ask the user instead of guessing.`
++  // LambdaTeX: the server picks the TeX engine (deploy/patches/compile/)
++  system += `\n\nThe TeX engine is chosen automatically on every compile, and the compile result reports it as "compiler". A "% !TEX program = pdflatex|xelatex|lualatex" line at the top of the main file always wins; otherwise the engine follows what the project loads (fontspec, unicode-math, polyglossia, xeCJK, ctex or \\setmainfont need XeLaTeX or LuaLaTeX; luacode, luatexja or \\directlua need LuaLaTeX), and a compile whose log asks for another engine is retried with it. So when you add such a package, just compile; do not call set_compiler to fix engine errors. Use the magic comment only when the user asks for a specific engine. If a compile still produces no PDF, read the first error in its diagnostics and fix that cause. Many system fonts are installed (TeX Gyre, Latin Modern, Libertinus, Fira, Noto, Fandol, Arial, Times New Roman); if a font is not found, switch to one of these.`
++
++  // LambdaTeX patch: conversations are saved per user and project.
++  const conversationId = [req.body?.id, req.body?.chatId].find(isConversationId)
++  let saveTo = null
++  if (conversationId && projectId && userId) {
++    try {
++      if (await AuthorizationManager.promises.canUserReadProject(userId, projectId, null)) {
++        saveTo = { id: conversationId, userId, projectId }
++      }
++    } catch (err) {
++      logger.warn({ err, userId }, 'workbench: could not check project access for saving')
++    }
++  }
++
    let modelMessages
    try {
      modelMessages = await convertWorkbenchMessages(messages)
+@@ -146,6 +191,16 @@
+ 
+     result.pipeUIMessageStreamToResponse(res, {
+       consumeSseStream: consumeStream,
++      // LambdaTeX patch: save the whole conversation once the reply is complete.
++      originalMessages: messages,
++      async onFinish({ messages: allMessages }) {
++        if (!saveTo) return
++        try {
++          await saveConversation({ ...saveTo, messages: allMessages })
++        } catch (err) {
++          logger.warn({ err, userId }, 'workbench: could not save conversation')
++        }
++      },
+       // Suggestion counts are unmetered. Token headers report the balance
+       // before this request because headers are sent before streaming completes.
+       headers: {

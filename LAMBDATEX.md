@@ -108,6 +108,16 @@ Conversations with the assistant are saved per user and project. The 🕘 button
 assistant's header opens **Conversations**: reopen, rename or delete one, or start a **New
 conversation**. Reopening a project resumes the last conversation.
 
+The TeX engine is chosen automatically on every compile (Recompile, auto-compile and the
+assistant's compiles). A `% !TEX program = xelatex` (or `lualatex`, `pdflatex`) line at the
+top of the main file always wins. Otherwise the engine follows what the project loads,
+including `\input` files and the project's own `.sty`/`.cls`: `fontspec`, `unicode-math`,
+`polyglossia`, `xeCJK`, `ctex` or `\setmainfont` → XeLaTeX; `luacode`, `luatexja` or
+`\directlua` → LuaLaTeX. If a compile still produces no PDF because its log asks for
+another engine, it is compiled once more with that engine. The switch is saved in
+**Menu → Compiler**. Templates that test the engine themselves (`\ifPDFTeX … \else … \fi`)
+keep the engine you chose.
+
 ## Troubleshooting
 
 | Symptom | Cause / fix |
@@ -121,6 +131,8 @@ conversation**. Reopening a project resumes the last conversation.
 | AI chat: "Something's gone wrong" on a large file or with an image | `bin/logs web \| grep -iE "RateLimit\|content must be a string"`: the model's provider caps tokens per minute or doesn't accept images (Groq `gpt-oss-120b`). Use a model without those limits (see `docs/LLM_INTEGRATION.md`). |
 | AI chat: "Something's gone wrong" after the assistant uses a tool | `bin/logs web \| grep -i reasoning_content`: the reasoning-history patch isn't mounted. Check `deploy/patches/` and the override. |
 | Conversations button missing after an upgrade or rebuild | The frontend override isn't mounted or is stale: run `deploy/frontend/build.sh`, then `bin/docker-compose up -d --force-recreate sharelatex`. |
+| Compile uses an engine you don't want | Put `% !TEX program = <engine>` on the first line of the main file. To turn automatic choice off, set `AUTO_COMPILER=false` in `.env` and recreate the container. `bin/logs web \| grep -i "compiler chosen\|another engine"` shows each switch and its reason. |
+| LuaLaTeX compiles take ~35 s | LuaLaTeX rebuilds its font cache in every new compile container. Prefer XeLaTeX unless the document needs Lua. |
 | Theme change not visible | Bump `?v=N` in `deploy/branding/nginx/lambdatex-branding.conf`, then run `docker exec sharelatex nginx -s reload`. |
 
 ## Credits and licence
