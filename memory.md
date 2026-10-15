@@ -3,7 +3,9 @@
 ## Context
 - Goal: self-hosted Ayakaleaf Pro (Overleaf CE + Pro features, AGPL-3.0), branded LambdaTeX,
   wired to the lab's LiteLLM gateway `http://10.110.150.21:30883/v1`, model
-  `groq/openai/gpt-oss-120b` (previous gateway lambda-way/Qwen3.5 kept commented in `.env`).
+  `palmfuture/Qwen3.6-35B-A3B-GPTQ-Int4` (reads images, no TPM cap). The user prefers
+  Qwen3.5-122B via lambda-way once its vLLM backend is up: block kept commented in `.env`.
+  gpt-oss-120b on Groq is capped at 8k tokens/min and text-only, so it fails on real files.
 - **Repository of record**: GitLab `gitkube.deslabcloud.com/ahmed_rebaii/lambdatex` (project 83),
   cloned at `~/lambdatex`. Deployment-only (no application source; the app runs from the
   published image). Remote `gitlab` over HTTPS; a repo-local credential helper reads
@@ -71,9 +73,8 @@
 
 ## Status (2026-10-14)
 - Platform: create/save/compile/PDF/zip export/persistence/isolation all PASS.
-- AI (current: LiteLLM `10.110.150.21:30883`, `groq/openai/gpt-oss-120b`): direct
-  auth/chat/stream/tools/stream-tools/round-trip PASS; via app Error Assistant, chat LaTeX
-  generation and the agentic loop (read → replace_lines → compile) PASS.
+- AI (current: Qwen3.6-35B): gateway tests, Error Assistant, chat, agentic loop, image chat and
+  a ~100k-character document edit all PASS (2026-10-15).
 - Earlier gateway (lambda-way, Qwen3.5): key 1 over budget, vLLM backend later down (HTTP 500).
 - Mail: Brevo login verified; real delivery not yet confirmed.
 - The account `admin@lambdalab.org` has one user project (`aa`); test fixtures are deleted

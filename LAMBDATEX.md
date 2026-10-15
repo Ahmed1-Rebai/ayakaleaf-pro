@@ -9,7 +9,7 @@ gateway integration, and tests. It contains no application source code.
 |---|---|
 | Application | [`ghcr.io/ayaka-notes/overleaf-pro:6.3.0`](https://github.com/ayaka-notes/ayakaleaf-pro), run with [`ayaka-notes/toolkit`](https://github.com/ayaka-notes/toolkit) |
 | Compiles | sandboxed, one `ghcr.io/ayaka-notes/texlive-full:2026.1` container per project |
-| AI | lab LiteLLM gateway, `groq/openai/gpt-oss-120b` ([docs/LLM_INTEGRATION.md](docs/LLM_INTEGRATION.md)) |
+| AI | lab LiteLLM gateway, `palmfuture/Qwen3.6-35B-A3B-GPTQ-Int4` (reads images) ([docs/LLM_INTEGRATION.md](docs/LLM_INTEGRATION.md)) |
 | Mail | Brevo SMTP relay |
 | Look | LambdaTeX theme ([docs/BRANDING.md](docs/BRANDING.md)) |
 | URL | http://10.110.188.149:8001/ (internal network) |
@@ -111,6 +111,7 @@ Reject; **Auto** applies them as they arrive, with **Undo** on each.
 | "Forgot your password?" → *Something went wrong* (500) | Mail relay unreachable or login rejected: `bin/logs web \| grep -iE "smtp\|ECONN"`. Check the `Email__*` values. |
 | `seed-admin.sh` fails with `contains_email` / `too_similar` | Overleaf rejects passwords that contain or resemble the email address. |
 | Not reachable from other machines | `docker port sharelatex` must show `0.0.0.0:8001`. A timeout instead of a refusal points to a network firewall. |
+| AI chat: "Something's gone wrong" on a large file or with an image | `bin/logs web \| grep -iE "RateLimit\|content must be a string"`: the model's provider caps tokens per minute or doesn't accept images (Groq `gpt-oss-120b`). Use a model without those limits (see `docs/LLM_INTEGRATION.md`). |
 | AI chat: "Something's gone wrong" after the assistant uses a tool | `bin/logs web \| grep -i reasoning_content`: the reasoning-history patch isn't mounted. Check `deploy/patches/` and the override. |
 | Theme change not visible | Bump `?v=N` in `deploy/branding/nginx/lambdatex-branding.conf`, then run `docker exec sharelatex nginx -s reload`. |
 

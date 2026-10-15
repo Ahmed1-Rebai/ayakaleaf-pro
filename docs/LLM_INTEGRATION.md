@@ -9,9 +9,9 @@ entirely through environment variables. No code changes were needed or made.
 |---|---|---|
 | `AI_ENABLED` | `true` | Master switch (default off). |
 | `AI_BASE_URL` | `http://10.110.150.21:30883/v1` | Lab LiteLLM gateway on the internal network. Must include `/v1`; the SDK appends `/chat/completions`. |
-| `AI_MODEL` | `groq/openai/gpt-oss-120b` | Used by the chat and the Error Assistant (served by Groq through LiteLLM). |
+| `AI_MODEL` | `palmfuture/Qwen3.6-35B-A3B-GPTQ-Int4` | Used by the chat and the Error Assistant. Self-hosted behind the lab gateway; reads images, no per-minute token cap. |
 | `AI_API_KEY` | *(secret)* | Sent as `Authorization: Bearer …`. |
-| `AI_IMAGE_MODEL` | unset | Optional model for chats that contain images. |
+| `AI_IMAGE_MODEL` | unset | Optional model for chats that contain images. Unset: images go to `AI_MODEL`, which must then read images. |
 | `AI_MAX_STEPS` | unset (20) | Tool calls per user message. |
 | `AI_TOKEN_QUOTA` / `AI_TOKEN_QUOTA_PERIOD` | unset (unlimited) | Per-user token budget counted in Redis. |
 | `AI_PROXY_URL` | unset | HTTP proxy for gateway calls. |
@@ -68,31 +68,36 @@ guarantee it.
   repository source but is **not in the published `6.3.0` image**, so it is unavailable
   in this deployment.
 
-## Verified capabilities (2026-10-14)
+## Verified capabilities (2026-10-15)
 
-Current gateway: LiteLLM at `http://10.110.150.21:30883/v1`, model `groq/openai/gpt-oss-120b`.
+Current: LiteLLM at `http://10.110.150.21:30883/v1`, model `palmfuture/Qwen3.6-35B-A3B-GPTQ-Int4`.
 
-| Capability | Status | Evidence |
+The gateway's models, tested for what the assistant needs:
+
+| Model | Chat | Tool calling | ~29k-token request | Image | Verdict |
+|---|---|---|---|---|---|
+| `palmfuture/Qwen3.6-35B-A3B-GPTQ-Int4` | ✅ | ✅ | ✅ 6.5 s | ✅ | **in use** |
+| `groq/openai/gpt-oss-120b` | ✅ | ✅ | ❌ Groq on-demand tier: 8,000 tokens/min | ❌ text-only | fails on real documents and images |
+| `Qwen/Qwen3.5-122B-A10B-GPTQ-Int4` (also via lambda-way) | ❌ backend down (`vllm-svc-coding:8001`) | | | | preferred once it's back; settings kept commented in `.env` |
+
+| Capability (Qwen3.6-35B) | Status | Evidence |
 |---|---|---|
-| Config reaches container | ✅ verified | `AI_*` present in `sharelatex`; key length checked, never printed |
-| Editor shows AI features | ✅ verified | `aiAvailable: true`; `/workbench/access` → `{"allowed":true,"errorAssistant":true}` |
-| Auth + `/models` | ✅ verified | 200, configured model listed (3 models); a bogus key → 401 |
-| Chat completion | ✅ verified | 0.3 s; `GATEWAY-OK`, 30 reasoning tokens |
-| Streaming (SSE + `include_usage`) | ✅ verified | 33 chunks, usage in the final chunk |
-| Tool calling (non-stream and **streamed** `tool_calls`) | ✅ verified | `finish_reason=tool_calls`, valid JSON arguments |
-| Tool-result round-trip (`role: tool`) | ✅ verified | model continues correctly after a tool result |
-| Compile-error assistance (`/suggest-fix`) | ✅ verified | `Environment itemiz undefined` → line 5 `\begin{itemiz}` → `\begin{itemize}` (0.7 s) |
-| Chat via app + LaTeX generation (`/workbench/tex-gpt`) | ✅ verified | reasoning → text stream; correct `tabular` (1.4 s) |
-| Agentic editing (multi-step tool loop) | ✅ verified | API test replaying reasoning like the browser: `read_current_file` → `replace_lines` ×2 → `compile`: 0 errors → summary |
-| Real editor, multi-step chat | ✅ verified (with `deploy/patches/`) | Groq rejected the replayed reasoning (`property 'reasoning_content' is unsupported`), so every follow-up or tool-using chat failed with "Something's gone wrong". The server patch drops earlier reasoning from the history |
-| Edit mode Manual / Auto (browser) | ✅ verified | Manual: document unchanged until Apply; Auto: applied with no click, Undo shown (`deploy/tests/browser/`) |
-| Graceful failure | ✅ verified | gateway errors (429 budget, 500 backend down) → client gets a generic message; details only in server logs |
+| Direct gateway: auth, chat, stream, tools, streamed tools, tool round-trip | ✅ verified | `gateway_test.py` all PASS |
+| Compile-error assistance (`/suggest-fix`) | ✅ verified | both `itemiz` lines fixed in one round (~21 s) |
+| Chat LaTeX generation | ✅ verified | correct `table`/`tabular`, 2.2 s |
+| Agentic editing (read → replace_lines → compile) | ✅ verified | 0 errors; reasoning replayed like the browser |
+| Image attached to a chat | ✅ verified | colour of an attached PNG identified |
+| Large document (~100k characters): "remove the navbar of the first page" | ✅ verified | read the file, added `\thispagestyle{empty}` after `\maketitle`, compiles |
+| Edit mode Manual / Auto, editor UI | ✅ verified (2026-10-14) | `deploy/tests/browser/` |
 
 Observations:
 * **Reasoning history.** Earlier reasoning is not sent back to the model (server patch in
   `deploy/patches/`): some gateways reject it, and models don't need it.
-* **Light reasoning.** gpt-oss-120b reasons briefly (22–30 reasoning tokens on simple requests)
-  and answers in well under 2 s, so the AI features feel immediate.
+* **Images in chat** let the model *see* a picture. They are not copied into the project: to
+  put a photo in the document, upload it to the project first, then ask the assistant to
+  insert it (it references the file with `\includegraphics`).
+* **Speed.** Qwen3.6 reasons before answering, so simple chats take 1–3 s and the Error
+  Assistant up to ~20 s. gpt-oss on Groq was faster but is capped at 8,000 tokens per minute.
 * **Error Assistant is one-error, one-line.** A typo on two lines (`\begin{itemiz}` and
   `\end{itemiz}`) needs two "Suggest fix" rounds. That's by design (a single
   `suggestLineChange`, `stopWhen: stepCountIs(1)`). The chat agent fixes both in one edit.

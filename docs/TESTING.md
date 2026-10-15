@@ -79,6 +79,20 @@ Checked with headless Chromium (Playwright) screenshots at 1440×900, and at 390
 | `ai_app_test.py`: chat LaTeX generation | ✅ PASS | reasoning → text stream, correct `tabular`, 1.4 s |
 | `ai_agentic_test.py`: agentic editing | ✅ PASS | `read_current_file` → `replace_lines` (lines 5–7) → `compile`: 0 errors → summary. This first version didn't replay reasoning, so it missed the browser failure below |
 
+## Model switch to Qwen3.6-35B (2026-10-15)
+
+Reported in the editor: an image in the chat and "remove the navbar of the first page" both
+ended in "Something's gone wrong". Server log: Groq `messages[3].content must be a string`
+(gpt-oss is text-only) and `Request too large … TPM: Limit 8000, Requested 22451`.
+
+| Test (Qwen3.6-35B) | Result |
+|---|---|
+| `gateway_test.py` (7 checks) | ✅ all PASS |
+| `ai_app_test.py`: Error Assistant, chat LaTeX | ✅ PASS |
+| `ai_agentic_test.py` | ✅ PASS |
+| Image attached to a chat (via `/workbench/tex-gpt`, as the browser sends it) | ✅ PASS |
+| ~100k-character document with a `fancyhdr` header: "remove the navbar of the first page" | ✅ PASS: `\thispagestyle{empty}` after `\maketitle`, compiles |
+
 ## AI edit mode and reasoning patch (real editor, Playwright)
 
 | Test | Result | Detail |
