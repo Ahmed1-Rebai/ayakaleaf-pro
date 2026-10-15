@@ -1,0 +1,56 @@
+--- components/workbench-chat.tsx.orig	2026-10-15 10:09:50.807174480 +0000
++++ components/workbench-chat.tsx	2026-10-15 10:11:12.032377299 +0000
+@@ -6,6 +6,9 @@
+ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+ import classNames from 'classnames'
+ import { useChat } from '@ai-sdk/react'
++import type { UIMessage } from 'ai'
++// LambdaTeX patch: saved conversations need the project id.
++import { useProjectContext } from '@/shared/context/project-context'
+ import {
+   DefaultChatTransport,
+   lastAssistantMessageIsCompleteWithToolCalls,
+@@ -88,9 +91,12 @@
+ export default function WorkbenchChat({
+   chatId,
+   view,
++  initialMessages,
+ }: {
+   chatId: string
+   view: EditorView
++  /** LambdaTeX patch: messages of a saved conversation being reopened. */
++  initialMessages?: UIMessage[]
+ }) {
+   const [error, setError] = useState<WorkbenchError | 'paywalled' | false>(false)
+   const {
+@@ -120,10 +126,11 @@
+   const canChat =
+     hasGivenAiConsent && hasAiFeatures && suggestionsOk && tokensOk && !showAiFeaturesDisabled
+ 
+-  const configRef = useRef({ enabledTools, model })
++  const { projectId } = useProjectContext()
++  const configRef = useRef({ enabledTools, model, projectId })
+   useEffect(() => {
+-    configRef.current = { enabledTools, model }
+-  }, [enabledTools, model])
++    configRef.current = { enabledTools, model, projectId }
++  }, [enabledTools, model, projectId])
+ 
+   const fileActions = useWorkbenchFileActions()
+   const fileActionsRef = useRef(fileActions)
+@@ -142,6 +149,7 @@
+         enabledTools: Array.from(configRef.current.enabledTools),
+         model: configRef.current.model,
+         chatId,
++        projectId: configRef.current.projectId,
+       }),
+       async fetch(input: RequestInfo | URL, init?: RequestInit) {
+         const response = await fetch(input, init)
+@@ -181,6 +189,7 @@
+     status,
+   } = useChat({
+     id: chatId,
++    messages: initialMessages,
+     transport: transportRef.current,
+     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+     onError(err: unknown) {

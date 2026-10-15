@@ -79,6 +79,16 @@ Checked with headless Chromium (Playwright) screenshots at 1440×900, and at 390
 | `ai_app_test.py`: chat LaTeX generation | ✅ PASS | reasoning → text stream, correct `tabular`, 1.4 s |
 | `ai_agentic_test.py`: agentic editing | ✅ PASS | `read_current_file` → `replace_lines` (lines 5–7) → `compile`: 0 errors → summary. This first version didn't replay reasoning, so it missed the browser failure below |
 
+## Saved conversations and decisiveness (2026-10-15)
+
+| Test | Result |
+|---|---|
+| `ai_conversations_test.py` (API): auto-save, title, reopen, continue, rename, 404/400 checks, delete | ✅ 10/10 |
+| Isolation (store, two users): no read, rename, delete, overwrite or listing of another user's conversation | ✅ 7/7 |
+| `browser/ai_conversations_test.py` (editor): button, two conversations, New conversation, list order/active, reopen, **reload resumes**, rename (persisted), delete, delete the active one | ✅ 12/12 |
+| Frontend build: same 2 webpack warnings as the unmodified baseline; only `pages/ide` js/css changed | ✅ |
+| Decisiveness, "add a caption under the image" | ✅ 4 tool calls, compiles (previously 20+) |
+
 ## Model switch to Qwen3.6-35B (2026-10-15)
 
 Reported in the editor: an image in the chat and "remove the navbar of the first page" both

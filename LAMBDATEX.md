@@ -23,7 +23,8 @@ deploy/
   scripts/seed-admin.*     create or update the admin account from .env
   tests/                   platform, gateway, AI and agentic end-to-end tests
   toolkit-override.example.yml   becomes <toolkit>/config/docker-compose.override.yml
-  patches/                 server-side file overrides (mounted read-only) and their check script
+  patches/                 server and frontend file overrides and their check script
+  frontend/build.sh        rebuilds the editor frontend with the patches (output: frontend/dist)
 docs/                      LLM integration, branding, test results
 .env.example               every setting, placeholders only (the real .env is git-ignored)
 memory.md                  context for future maintenance sessions
@@ -103,6 +104,10 @@ Reject; **Auto** applies them as they arrive, with **Undo** on each. To put a ph
 document, attach it in the chat and ask (e.g. "insert my photo at the bottom"): the assistant
 saves it into the project under `images/` and includes it.
 
+Conversations with the assistant are saved per user and project. The 🕘 button in the
+assistant's header opens **Conversations**: reopen, rename or delete one, or start a **New
+conversation**. Reopening a project resumes the last conversation.
+
 ## Troubleshooting
 
 | Symptom | Cause / fix |
@@ -115,6 +120,7 @@ saves it into the project under `images/` and includes it.
 | Not reachable from other machines | `docker port sharelatex` must show `0.0.0.0:8001`. A timeout instead of a refusal points to a network firewall. |
 | AI chat: "Something's gone wrong" on a large file or with an image | `bin/logs web \| grep -iE "RateLimit\|content must be a string"`: the model's provider caps tokens per minute or doesn't accept images (Groq `gpt-oss-120b`). Use a model without those limits (see `docs/LLM_INTEGRATION.md`). |
 | AI chat: "Something's gone wrong" after the assistant uses a tool | `bin/logs web \| grep -i reasoning_content`: the reasoning-history patch isn't mounted. Check `deploy/patches/` and the override. |
+| Conversations button missing after an upgrade or rebuild | The frontend override isn't mounted or is stale: run `deploy/frontend/build.sh`, then `bin/docker-compose up -d --force-recreate sharelatex`. |
 | Theme change not visible | Bump `?v=N` in `deploy/branding/nginx/lambdatex-branding.conf`, then run `docker exec sharelatex nginx -s reload`. |
 
 ## Credits and licence

@@ -19,6 +19,9 @@ import {
   projectIdFromReferer,
   createSaveAttachedImageTool,
 } from './AttachedImageTool.mjs'
+// LambdaTeX patch: save conversations.
+import { isConversationId, saveConversation } from './ConversationStore.mjs'
+import AuthorizationManager from '../../../../app/src/Features/Authorization/AuthorizationManager.mjs'
 import { createToolCallLimit } from './ToolCallLimit.mjs'
 import {
   isQuotaEnabled,
@@ -113,12 +116,16 @@ async function texGpt(req, res) {
   if (webSearch) tools.web_search = WEB_SEARCH_TOOL
   if (docsSearch) tools.search_documentation = DOCS_SEARCH_TOOL
   // LambdaTeX patch: offered only when the chat has images and runs in a project.
+  const bodyProjectId = req.body?.projectId
+  const projectId =
+    typeof bodyProjectId === 'string' && /^[0-9a-f]{24}$/.test(bodyProjectId)
+      ? bodyProjectId
+      : projectIdFromReferer(req)
   const images = attachedImages(messages)
-  const imageProjectId = projectIdFromReferer(req)
-  if (images.length > 0 && imageProjectId && userId) {
+  if (images.length > 0 && projectId && userId) {
     tools.save_attached_image = createSaveAttachedImageTool({
       images,
-      projectId: imageProjectId,
+      projectId,
       userId,
     })
   }
@@ -134,6 +141,22 @@ async function texGpt(req, res) {
 
   if (tools.save_attached_image) {
     system += `\n\nThe user attached ${images.length} image(s) in this chat. You can see them, but they are not project files yet. To use one in the document (for example with \\includegraphics), first call save_attached_image, then reference exactly the path it returns. Never reference an attached image by a file name you made up.`
+  }
+
+  // LambdaTeX patch: keep the agent from endless small re-edits.
+  system += `\n\nWork decisively. Read what you need, decide on the complete change, then make it with as few replace_lines calls as possible, ideally one. After editing, compile and check the result at most once; if it is correct, stop and summarise in one or two sentences. Do not make further cosmetic adjustments, re-apply an edit you already made, or keep re-checking unless the user asks. If something still fails after two attempts, explain the problem and ask the user instead of guessing.`
+
+  // LambdaTeX patch: conversations are saved per user and project.
+  const conversationId = [req.body?.id, req.body?.chatId].find(isConversationId)
+  let saveTo = null
+  if (conversationId && projectId && userId) {
+    try {
+      if (await AuthorizationManager.promises.canUserReadProject(userId, projectId, null)) {
+        saveTo = { id: conversationId, userId, projectId }
+      }
+    } catch (err) {
+      logger.warn({ err, userId }, 'workbench: could not check project access for saving')
+    }
   }
 
   let modelMessages
@@ -166,6 +189,16 @@ async function texGpt(req, res) {
 
     result.pipeUIMessageStreamToResponse(res, {
       consumeSseStream: consumeStream,
+      // LambdaTeX patch: save the whole conversation once the reply is complete.
+      originalMessages: messages,
+      async onFinish({ messages: allMessages }) {
+        if (!saveTo) return
+        try {
+          await saveConversation({ ...saveTo, messages: allMessages })
+        } catch (err) {
+          logger.warn({ err, userId }, 'workbench: could not save conversation')
+        }
+      },
       // Suggestion counts are unmetered. Token headers report the balance
       // before this request because headers are sent before streaming completes.
       headers: {

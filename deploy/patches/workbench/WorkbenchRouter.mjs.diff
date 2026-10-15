@@ -1,0 +1,39 @@
+--- upstream services/web/modules/workbench/app/src/WorkbenchRouter.mjs (ayaka-notes/ayakaleaf-pro 7e6ffc2)
++++ deploy/patches/workbench/WorkbenchRouter.mjs (LambdaTeX)
+@@ -2,6 +2,8 @@
+ import WorkbenchController from './WorkbenchController.mjs'
+ import PermissionsMiddleware from './PermissionsMiddleware.mjs'
+ import { isConfigured } from './WorkbenchAiClient.mjs'
++// LambdaTeX patch: saved conversations.
++import ConversationController from './ConversationController.mjs'
+ 
+ export default {
+   apply(webRouter) {
+@@ -14,6 +16,27 @@
+       AuthenticationController.requireLogin(),
+       WorkbenchController.getAccess
+     )
++    // LambdaTeX patch: saved conversations (list, open, rename, delete).
++    webRouter.get(
++      '/workbench/conversations',
++      AuthenticationController.requireLogin(),
++      ConversationController.list
++    )
++    webRouter.get(
++      '/workbench/conversations/:conversationId',
++      AuthenticationController.requireLogin(),
++      ConversationController.get
++    )
++    webRouter.post(
++      '/workbench/conversations/:conversationId/rename',
++      AuthenticationController.requireLogin(),
++      ConversationController.rename
++    )
++    webRouter.delete(
++      '/workbench/conversations/:conversationId',
++      AuthenticationController.requireLogin(),
++      ConversationController.remove
++    )
+     // Workbench AI chat (Vercel AI SDK useChat endpoint). The global JSON body
+     // parser (12 MB by default) handles the UI-message history payload.
+     webRouter.post(

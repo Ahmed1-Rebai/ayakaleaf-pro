@@ -49,6 +49,10 @@
   new `AttachedImageTool.mjs` add `save_attached_image` (dynamic tool; project from Referer;
   write access checked) so attached photos become project files. Run `deploy/patches/check-patches.sh`
   after any image change; recreate the container after editing a patch.
+- Saved conversations: server patches (router, `ConversationStore.mjs`, `ConversationController.mjs`,
+  controller `onFinish` save) plus frontend patches in `deploy/patches/frontend/`. Rebuild with
+  `deploy/frontend/build.sh` (writes `builds/<time>/`, never deletes; `dist` is a symlink to the
+  current build); then recreate with `--force-recreate`. Old `builds/` folders are deleted by hand.
 - API tests must replay reasoning like the browser does; real UI checks need the Playwright
   browser test (`deploy/tests/browser/`).
 

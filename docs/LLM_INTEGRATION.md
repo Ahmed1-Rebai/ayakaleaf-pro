@@ -12,7 +12,7 @@ entirely through environment variables. No code changes were needed or made.
 | `AI_MODEL` | `palmfuture/Qwen3.6-35B-A3B-GPTQ-Int4` | Used by the chat and the Error Assistant. Self-hosted behind the lab gateway; reads images, no per-minute token cap. |
 | `AI_API_KEY` | *(secret)* | Sent as `Authorization: Bearer …`. |
 | `AI_IMAGE_MODEL` | unset | Optional model for chats that contain images. Unset: images go to `AI_MODEL`, which must then read images. |
-| `AI_MAX_STEPS` | unset (20) | Tool calls per user message. |
+| `AI_MAX_STEPS` | `12` | Tool calls per user message (upstream default 20). A backstop against endless re-edits. |
 | `AI_TOKEN_QUOTA` / `AI_TOKEN_QUOTA_PERIOD` | unset (unlimited) | Per-user token budget counted in Redis. |
 | `AI_PROXY_URL` | unset | HTTP proxy for gateway calls. |
 | `TAVILY_API_KEY` | unset | Enables the chat's web-search tool. Off here. |
@@ -117,3 +117,33 @@ python3 deploy/tests/gateway_test.py      # direct: auth, chat, stream, tools, s
 python3 deploy/tests/ai_app_test.py       # via app: Error Assistant + chat LaTeX generation
 python3 deploy/tests/ai_agentic_test.py   # via app: read_current_file -> replace_lines -> compile loop
 ```
+
+## Saved conversations
+
+Conversations are stored server-side in MongoDB (`workbenchConversations`), one document
+per conversation: owner, project, title, the AI SDK UI messages, timestamps.
+
+* **Saving:** automatic when each reply finishes (`onFinish` of the reply stream, with
+  `originalMessages` so the whole conversation is saved). The editor sends the chat id and
+  project id; the user must be able to read the project.
+* **Endpoints** (login required, own conversations only): `GET /workbench/conversations?project_id=`,
+  `GET /workbench/conversations/:id`, `POST /workbench/conversations/:id/rename`,
+  `DELETE /workbench/conversations/:id`.
+* **Privacy:** every query includes the owner's user id. Another user cannot read, rename,
+  delete, overwrite or list them (tested). Titles come from the first message.
+* **Size:** very long conversations (>8 MB, mostly inline images) drop their oldest
+  images and keep a short note instead.
+* **UI:** 🕘 **Conversations** in the assistant's header: the list for this project (newest
+  first, active marked), reopen, inline rename, delete with confirmation, **New
+  conversation**. The last conversation is resumed when the project is reopened.
+
+Server code: `deploy/patches/workbench/` (router, store, endpoints, controller). Frontend:
+`deploy/patches/frontend/`, built by `deploy/frontend/build.sh`.
+
+## Decisiveness
+
+Qwen3.6 used to loop through many small edit, compile and view cycles. The system prompt
+now asks it to read what it needs, make the complete change in as few `replace_lines` calls
+as possible, compile and check at most once, then stop and summarise, and to ask the user
+after two failed attempts. `AI_MAX_STEPS=12` caps tool calls per message. On the
+"caption under the image" task: 4 tool calls (read, edit, retry, compile) instead of 20+.

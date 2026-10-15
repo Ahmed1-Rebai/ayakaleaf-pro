@@ -1,0 +1,159 @@
+--- components/workbench-panel.tsx.orig	2026-10-15 10:09:50.699174210 +0000
++++ components/workbench-panel.tsx	2026-10-15 10:11:48.654468725 +0000
+@@ -2,7 +2,8 @@
+  * Hosts the AI conversation in the editor rail and provides docking controls.
+  * Starting a new chat changes the chat ID to reset conversation state.
+  */
+-import { memo, useCallback, useState } from 'react'
++import { memo, useCallback, useEffect, useState } from 'react'
++import classNames from 'classnames'
+ import { useTranslation } from 'react-i18next'
+ import { Tab } from 'react-bootstrap'
+ import { v4 as uuid } from 'uuid'
+@@ -20,6 +21,13 @@
+   type WorkbenchTab,
+ } from '../context/workbench-settings-context'
+ import WorkbenchChat from './workbench-chat'
++// LambdaTeX patch: saved conversations.
++import type { UIMessage } from 'ai'
++import { getJSON } from '@/infrastructure/fetch-json'
++import customLocalStorage from '@/infrastructure/local-storage'
++import { useProjectContext } from '@/shared/context/project-context'
++import { debugConsole } from '@/utils/debugging'
++import ConversationList from './conversation-list'
+ 
+ /** Dock-side switcher. */
+ const SideSelector = memo(function SideSelector() {
+@@ -55,13 +63,30 @@
+   )
+ })
+ 
++/** LambdaTeX patch: opens the saved conversations. */
++const ConversationsButton = ({ open, onClick }: { open: boolean; onClick: () => void }) => (
++  <OLTooltip
++    id="workbench-conversations"
++    description={open ? 'Back to the conversation' : 'Conversations'}
++    overlayProps={{ placement: 'bottom' }}
++  >
++    <OLIconButton
++      className={`rail-panel-header-button-subdued${open ? ' active' : ''}`}
++      onClick={onClick}
++      icon="history"
++      size="sm"
++      aria-pressed={open}
++      accessibilityLabel="Conversations"
++    />
++  </OLTooltip>
++)
++
+ /** New-chat button. */
+ const NewChatButton = ({ onClick }: { onClick: () => void }) => {
+-  const { t } = useTranslation()
+   return (
+     <OLTooltip
+       id="start-new-chat"
+-      description={t('start_new_chat')}
++      description="New conversation"
+       overlayProps={{ placement: 'bottom' }}
+       key="new-chat"
+     >
+@@ -93,6 +118,38 @@
+   const { tab, setTab, position, setOpen } = useWorkbenchSettings()
+   const { isOpen, setIsOpen } = useRailContext()
+   const [chatId, setChatId] = useState(() => uuid())
++  // LambdaTeX patch: saved conversations.
++  const { projectId } = useProjectContext()
++  const storageKey = `workbench.conversation.${projectId}`
++  const [initialMessages, setInitialMessages] = useState<UIMessage[] | undefined>()
++  const [showConversations, setShowConversations] = useState(false)
++
++  const openConversation = useCallback(
++    async (id: string) => {
++      try {
++        const conversation = await getJSON(`/workbench/conversations/${id}`)
++        setInitialMessages(conversation.messages)
++        setChatId(conversation.id)
++        setShowConversations(false)
++        setTab('chat')
++      } catch (err) {
++        debugConsole.error(err)
++        customLocalStorage.removeItem(storageKey)
++      }
++    },
++    [setTab, storageKey]
++  )
++
++  // Reopening the project resumes the last conversation.
++  useEffect(() => {
++    const lastId = customLocalStorage.getItem(storageKey)
++    if (typeof lastId === 'string' && lastId) openConversation(lastId)
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [])
++
++  useEffect(() => {
++    customLocalStorage.setItem(storageKey, chatId)
++  }, [chatId, storageKey])
+ 
+   const hasAiFeatures = useAiAccess()
+   const { hasGivenAiConsent } = useAiConsent()
+@@ -100,6 +157,8 @@
+ 
+   const handleNewChat = useCallback(() => {
+     setTab('chat')
++    setShowConversations(false)
++    setInitialMessages(undefined)
+     const newChatId = uuid()
+     setChatId(newChatId)
+     sendMB('ai-chat', {
+@@ -117,7 +176,11 @@
+   }, [chatId, position, setOpen, isOpen, setIsOpen])
+ 
+   return (
+-    <div className="workbench-panel">
++    <div
++      className={classNames('workbench-panel', {
++        'workbench-panel-conversations-open': showConversations,
++      })}
++    >
+       <RailPanelHeader
+         title={
+           <span className="workbench-panel-title-inner">
+@@ -126,6 +189,10 @@
+         }
+         actions={
+           <>
++            <ConversationsButton
++              open={showConversations}
++              onClick={() => setShowConversations(open => !open)}
++            />
+             <NewChatButton onClick={handleNewChat} />
+             <SideSelector />
+           </>
+@@ -147,10 +214,26 @@
+             className="workbench-tab-pane workbench-chat-pane"
+             key="chat"
+           >
+-            <WorkbenchChat chatId={chatId} view={view} key={chatId} />
++            <WorkbenchChat
++              chatId={chatId}
++              view={view}
++              initialMessages={initialMessages}
++              key={chatId}
++            />
+           </Tab.Pane>
+         </Tab.Content>
+       </Tab.Container>
++      {showConversations && (
++        <ConversationList
++          projectId={projectId}
++          activeId={chatId}
++          onOpen={openConversation}
++          onNew={handleNewChat}
++          onDeleted={id => {
++            if (id === chatId) handleNewChat()
++          }}
++        />
++      )}
+     </div>
+   )
+ })
