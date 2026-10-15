@@ -56,6 +56,12 @@
 - Overleaf passes no `requireTLS` to nodemailer, so STARTTLS is opportunistic; port 465 with
   `OVERLEAF_EMAIL_SMTP_SECURE=true` would enforce TLS.
 
+## GitHub fork mirror
+- `Ahmed1-Rebai/ayakaleaf-pro` branch `lab/llm-gateway-deploy` = upstream `server-pro` + the
+  same deployment commits. To mirror new LambdaTex commits: shallow-clone that branch,
+  replay each commit's `deploy/ docs/ .env.example memory.md` snapshot with its original
+  author/dates, keep `LAMBDATEX.md` = this README, then push (fast-forward, no force).
+
 ## Gotchas
 - `bin/up` pulls the TeX Live image before starting. Use `SIBLING_CONTAINERS_PULL=false bin/up -d`
   once it is present.
@@ -76,6 +82,6 @@
 ## Next steps
 1. After any `.env` change: `cd ~/ayakaleaf-toolkit && bin/docker-compose up -d sharelatex`,
    then `python3 deploy/tests/gateway_test.py` (delete test projects after the app tests).
-2. Replace GitLab `main` with `main-clean` (user step: force-push or switch default branch).
+2. Push LambdaTex changes to GitLab `main` (`git push`; `main-clean` is now redundant and can be deleted).
 3. Confirm a real Brevo delivery (e.g. "Forgot your password?").
 4. Optional: `AI_TOKEN_QUOTA` per user; TLS proxy for non-local access; disable GitLab Auto DevOps.
