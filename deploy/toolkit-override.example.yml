@@ -34,6 +34,8 @@ services:
       # Server-side patch: save images attached in the AI chat into the project
       - /home/user/lambdatex/deploy/patches/workbench/WorkbenchController.mjs:/overleaf/services/web/modules/workbench/app/src/WorkbenchController.mjs:ro
       - /home/user/lambdatex/deploy/patches/workbench/AttachedImageTool.mjs:/overleaf/services/web/modules/workbench/app/src/AttachedImageTool.mjs:ro
+      # Server-side: AI failures classified by cause (code in the log and in the reply)
+      - /home/user/lambdatex/deploy/patches/workbench/AiErrors.mjs:/overleaf/services/web/modules/workbench/app/src/AiErrors.mjs:ro
       # Server-side: saved AI conversations
       - /home/user/lambdatex/deploy/patches/workbench/WorkbenchRouter.mjs:/overleaf/services/web/modules/workbench/app/src/WorkbenchRouter.mjs:ro
       - /home/user/lambdatex/deploy/patches/workbench/ConversationStore.mjs:/overleaf/services/web/modules/workbench/app/src/ConversationStore.mjs:ro

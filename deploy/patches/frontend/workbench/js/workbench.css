@@ -528,10 +528,38 @@
   display: flex;
 }
 .workbench-chat-pane .notification.workbench-error-notification {
-  align-items: center;
+  /* LambdaTeX: icon and close button at the top, action under the text */
+  align-items: flex-start;
   margin: var(--spacing-02) var(--spacing-02) var(--spacing-04);
   padding: 0 var(--spacing-04);
   width: auto;
+}
+.workbench-chat-pane
+  .notification.workbench-error-notification
+  .notification-content-and-cta {
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+.workbench-chat-pane
+  .notification.workbench-error-notification
+  .notification-content
+  p {
+  margin-bottom: var(--spacing-01);
+}
+.workbench-chat-pane
+  .notification.workbench-error-notification
+  .notification-cta {
+  margin: 0 0 var(--spacing-04);
+  padding: 0;
+}
+.workbench-chat-pane
+  .notification.workbench-error-notification
+  .notification-close-btn {
+  flex: none;
+  align-self: flex-start;
+  padding-top: var(--spacing-02);
 }
 .workbench-chat-pane
   .notification.workbench-error-notification
@@ -542,7 +570,7 @@
 .workbench-chat-pane
   .notification.workbench-error-notification
   .notification-icon {
-  padding: var(--spacing-02) var(--spacing-05) 0 0;
+  padding: var(--spacing-04) var(--spacing-05) 0 0;
 }
 .workbench-prompt-input {
   border-radius: var(--border-radius-base);

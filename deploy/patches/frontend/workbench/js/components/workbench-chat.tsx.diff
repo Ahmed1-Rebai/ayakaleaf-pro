@@ -1,5 +1,5 @@
---- components/workbench-chat.tsx.orig	2026-10-15 10:09:50.807174480 +0000
-+++ components/workbench-chat.tsx	2026-10-15 10:11:12.032377299 +0000
+--- /tmp/claude-1000/-home-user/c04d9bee-feae-42bd-89bc-ecaaeab0cae9/scratchpad/wc.orig	2026-10-16 20:29:13.056632618 +0000
++++ workbench-chat.tsx	2026-10-16 20:29:12.710635769 +0000
 @@ -6,6 +6,9 @@
  import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
  import classNames from 'classnames'
@@ -10,7 +10,24 @@
  import {
    DefaultChatTransport,
    lastAssistantMessageIsCompleteWithToolCalls,
-@@ -88,9 +91,12 @@
+@@ -30,7 +33,15 @@
+ import { useWorkbenchSettings, type WorkbenchTab } from '../context/workbench-settings-context'
+ import { useWorkbenchFileActions } from '../hooks/use-file-actions'
+ import { clientTools, serverTools } from '../tools/client-tools'
+-import { RateLimitError, ForbiddenError, ToolRejectionError, ToolCallLimitError } from '../errors'
++import { RateLimitError, ToolRejectionError } from '../errors'
++// LambdaTeX patch: each failure gets its own message (../ai-errors.ts)
++import {
++  AiRequestError,
++  codeForResponse,
++  describeAiError,
++  describeToolError,
++  isAbort,
++} from '../ai-errors'
+ import {
+   Conversation,
+   ConversationContent,
+@@ -88,9 +99,12 @@
  export default function WorkbenchChat({
    chatId,
    view,
@@ -23,7 +40,7 @@
  }) {
    const [error, setError] = useState<WorkbenchError | 'paywalled' | false>(false)
    const {
-@@ -120,10 +126,11 @@
+@@ -120,10 +134,11 @@
    const canChat =
      hasGivenAiConsent && hasAiFeatures && suggestionsOk && tokensOk && !showAiFeaturesDisabled
  
@@ -38,15 +55,51 @@
  
    const fileActions = useWorkbenchFileActions()
    const fileActionsRef = useRef(fileActions)
-@@ -142,6 +149,7 @@
+@@ -142,9 +157,16 @@
          enabledTools: Array.from(configRef.current.enabledTools),
          model: configRef.current.model,
          chatId,
 +        projectId: configRef.current.projectId,
        }),
        async fetch(input: RequestInfo | URL, init?: RequestInit) {
-         const response = await fetch(input, init)
-@@ -181,6 +189,7 @@
+-        const response = await fetch(input, init)
++        let response: Response
++        try {
++          response = await fetch(input, init)
++        } catch (err) {
++          if (isAbort(err)) throw err
++          throw new AiRequestError('offline')
++        }
+         if (response.headers.get('RateLimit-Reset')) {
+           const resetMs = parseInt(response.headers.get('RateLimit-Reset') || '0') * 1000
+           setPremiumSuggestionResetDate(new Date(Date.now() + resetMs))
+@@ -157,15 +179,14 @@
+           setTokensLeft(parseInt(response.headers.get('Token-RateLimit-Remaining') || '0'))
+         }
+         if (!response.ok) {
+-          if (response.status === 403) {
+-            throw new ForbiddenError()
+-          }
+-          if (response.status === 409) {
+-            throw new ToolCallLimitError()
+-          }
+           if (response.status === 429) {
+             throw new RateLimitError(response.headers.get('RateLimit-Reset'))
+           }
++          let serverCode: string | undefined
++          try {
++            serverCode = (await response.clone().json())?.error
++          } catch {}
++          throw new AiRequestError(codeForResponse(response.status, serverCode))
+         }
+         return response
+       },
+@@ -178,19 +199,21 @@
+     addToolOutput,
+     id,
+     sendMessage,
++    regenerate,
++    clearError,
      status,
    } = useChat({
      id: chatId,
@@ -54,3 +107,48 @@
      transport: transportRef.current,
      sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
      onError(err: unknown) {
+       if (err instanceof RateLimitError) {
+         setError('paywalled')
+-      } else if (err instanceof ToolCallLimitError) {
+-        setError(err.message)
+-      } else {
+-        debugConsole.error(err)
+-        setError(true)
++      } else if (!isAbort(err)) {
++        const info = describeAiError(err)
++        if (info.code === 'unknown') debugConsole.error(err)
++        setError(info)
+       }
+     },
+     onFinish(event: unknown) {
+@@ -226,7 +249,8 @@
+               errorText: err.message,
+             })
+             if (!(err instanceof ToolRejectionError) && !(err instanceof RateLimitError)) {
+-              setError(true)
++              const title = tool.title?.({ input: toolCall.input })
++              setError(describeToolError(typeof title === 'string' ? title : name, err))
+             }
+           }
+         }
+@@ -443,8 +467,18 @@
+         // Prevent composer interaction while chat access is unavailable.
+         {...(canChat ? {} : ({ inert: '' } as any))}
+       >
+-        {(error || status === 'error') && error !== 'paywalled' && (
+-          <WorkbenchErrorNotification content={error as WorkbenchError} />
++        {error && error !== 'paywalled' && (
++          <WorkbenchErrorNotification
++            content={error as WorkbenchError}
++            onRetry={() => {
++              setError(false)
++              regenerate()
++            }}
++            onDismiss={() => {
++              setError(false)
++              clearError()
++            }}
++          />
+         )}
+         <PromptInput
+           status={status}

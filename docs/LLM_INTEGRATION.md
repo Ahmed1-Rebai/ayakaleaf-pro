@@ -208,3 +208,35 @@ Inline suggestions in the source editor (grey ghost text; Tab accepts, Esc dismi
   `\\cite`), median 0.30–0.45 s. A repeated last word ("approaches to" + "to …") is dropped.
 * **Settings:** Settings → Editor → AI autocomplete and AI corrections (per browser). `AI_AUTOCOMPLETE=true` is
   set in `.env` (also the default); `false` turns the endpoint off; `AI_AUTOCOMPLETE_MODEL` uses another model on the same gateway.
+
+## Chat errors
+
+Every failure of the AI assistant has a cause, its own message, and the right action.
+Before, they all showed "Something's gone wrong… Try starting a new chat".
+
+* **Server** (`deploy/patches/workbench/AiErrors.mjs`): `classifyAiError()` sorts gateway and
+  network failures into a cause code. The code is logged (`bin/logs web | grep "AI error"`), with
+  the gateway's HTTP status and a short detail of at most 240 characters. It is also sent to the
+  editor: as `[code] …` in the reply stream, or as the JSON `error` of an HTTP error.
+* **Editor** (`deploy/patches/frontend/workbench/js/ai-errors.ts`): each code has a title, a
+  text, and "Try again" when retrying can help. "Try again" sends the message again;
+  dismissing removes the message. A failed browser-side step ("Compile", "Read file …") is
+  shown as a warning naming the step.
+
+| Code | Shown as | Typical cause | Try again |
+|---|---|---|---|
+| `offline` | Can't reach LambdaTeX | The user's network | ✓ |
+| `session_expired` | Your session has expired | Signed out, or an expired CSRF token | |
+| `ai_not_configured` / `ai_access_denied` | The AI assistant isn't set up / AI is turned off for your account | `AI_*` settings missing / `aiFeatures.enabled=false` | |
+| `gateway_unreachable` | The AI service isn't responding | Gateway down or timing out | ✓ |
+| `gateway_error` | The AI service had a problem | Gateway 5xx, e.g. its vLLM server down | ✓ |
+| `gateway_busy` | The AI service is busy | Provider rate limit (429) | ✓ |
+| `gateway_budget` | The AI budget is used up | LiteLLM `budget_exceeded`, provider quota | |
+| `gateway_auth` | The AI service refused LambdaTeX's key | Wrong or revoked `AI_API_KEY` | |
+| `model_unavailable` | The AI model isn't available | Wrong `AI_MODEL` | |
+| `context_too_long` | This conversation is too long | Over the model's context window (262,144 tokens for Qwen3.6) | |
+| `images_unsupported` | The model can't read images | Text-only model | |
+| `invalid_attachments` / `too_large` | This attachment can't be sent / This message is too large | Not an inline image; body over 12 MB | |
+| `tool_limit` | Step limit reached | `AI_MAX_STEPS` used up | |
+| `request_rejected` | The AI service rejected the request | Other 4xx from the gateway | ✓ |
+| `server_error` / `unknown` | LambdaTeX had a problem / Something went wrong | Anything else | ✓ |

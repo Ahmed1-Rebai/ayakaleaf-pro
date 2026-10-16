@@ -142,13 +142,13 @@ keep the engine you chose.
 | Symptom | Cause / fix |
 |---|---|
 | `bin/up` hangs before starting containers | It pulls the ~29 GB TeX Live image first. Pull it separately, or run `SIBLING_CONTAINERS_PULL=false bin/up -d`. |
-| AI chat: "The AI service returned an error" | `bin/logs web \| grep -iE "tex-gpt\|suggest-fix"`. `budget_exceeded` (429) means the key's spend limit is reached. `Cannot connect to host vllm-…` (500) means the gateway's model server is down. |
+| An AI chat message (e.g. "The AI service had a problem") | Each failure has its own message and a cause code. `bin/logs web \| grep "AI error"` shows the code, the gateway's HTTP status and a short detail for each one. The codes are listed in `docs/LLM_INTEGRATION.md` → "Chat errors". |
 | AI panel missing / `403 ai_not_configured` | `AI_ENABLED`, `AI_BASE_URL`, `AI_API_KEY` and `AI_MODEL` must be set: `docker exec sharelatex sh -c 'echo ${#AI_API_KEY}'` should print a non-zero length. |
 | "Forgot your password?" → *Something went wrong* (500) | Mail relay unreachable or login rejected: `bin/logs web \| grep -iE "smtp\|ECONN"`. Check the `Email__*` values. |
 | `seed-admin.sh` fails with `contains_email` / `too_similar` | Overleaf rejects passwords that contain or resemble the email address. |
 | Not reachable from other machines | `docker port sharelatex` must show `0.0.0.0:8001`. A timeout instead of a refusal points to a network firewall. |
-| AI chat: "Something's gone wrong" on a large file or with an image | `bin/logs web \| grep -iE "RateLimit\|content must be a string"`: the model's provider caps tokens per minute or doesn't accept images (Groq `gpt-oss-120b`). Use a model without those limits (see `docs/LLM_INTEGRATION.md`). |
-| AI chat: "Something's gone wrong" after the assistant uses a tool | `bin/logs web \| grep -i reasoning_content`: the reasoning-history patch isn't mounted. Check `deploy/patches/` and the override. |
+| AI chat: "The AI service is busy" or "The model can't read images" | The provider caps tokens per minute (`gateway_busy`) or the model is text-only (`images_unsupported`), e.g. Groq `gpt-oss-120b`. Use a model without those limits (see `docs/LLM_INTEGRATION.md`). |
+| AI chat: "The AI service rejected the request" after the assistant uses a tool | `bin/logs web \| grep "AI error"` shows `reasoning_content` in the detail: the reasoning-history patch isn't mounted. Check `deploy/patches/` and the override. |
 | Conversations button missing after an upgrade or rebuild | The frontend override isn't mounted or is stale: run `deploy/frontend/build.sh`, then `bin/docker-compose up -d --force-recreate sharelatex`. |
 | Compile uses an engine you don't want | Put `% !TEX program = <engine>` on the first line of the main file. To turn automatic choice off, set `AUTO_COMPILER=false` in `.env` and recreate the container. `bin/logs web \| grep -i "compiler chosen\|another engine"` shows each switch and its reason. |
 | LuaLaTeX compiles take ~35 s | LuaLaTeX rebuilds its font cache in every new compile container. Prefer XeLaTeX unless the document needs Lua. |

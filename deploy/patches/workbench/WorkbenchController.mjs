@@ -1,3 +1,5 @@
+// LambdaTeX: AI failures are classified (cause code in the log and in the reply stream)
+import { classifyAiError, streamErrorText } from './AiErrors.mjs'
 import logger from '@overleaf/logger'
 import { expressify } from '@overleaf/promise-utils'
 import { getAiAccess } from './PermissionsMiddleware.mjs'
@@ -217,14 +219,18 @@ async function texGpt(req, res) {
             }),
       },
       onError(err) {
-        logger.err({ err, userId }, 'workbench tex-gpt stream error')
-        return 'The AI service returned an error. Please try again.'
+        const { code, status, detail, repeat } = classifyAiError(err)
+        if (code !== 'aborted' && !repeat) {
+          logger.warn({ userId, code, status, detail }, 'workbench tex-gpt: AI error')
+        }
+        return streamErrorText(code)
       },
     })
   } catch (err) {
-    logger.err({ err, userId }, 'workbench tex-gpt failed')
+    const { code, status, detail } = classifyAiError(err)
+    logger.warn({ userId, code, status, detail }, 'workbench tex-gpt: AI error before the reply started')
     if (!res.headersSent) {
-      res.status(500).json({ error: 'internal' })
+      res.status(502).json({ error: code })
     }
   }
 }

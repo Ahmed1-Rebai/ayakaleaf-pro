@@ -1,6 +1,12 @@
---- /tmp/claude-1000/-home-user/c04d9bee-feae-42bd-89bc-ecaaeab0cae9/scratchpad/WorkbenchController.orig.mjs	2026-10-15 12:39:43.441704438 +0000
-+++ WorkbenchController.mjs	2026-10-15 12:39:42.949703480 +0000
-@@ -13,6 +13,15 @@
+--- /tmp/claude-1000/-home-user/c04d9bee-feae-42bd-89bc-ecaaeab0cae9/scratchpad/WC.orig	2026-10-16 20:28:02.049331072 +0000
++++ WorkbenchController.mjs	2026-10-16 20:28:01.068341491 +0000
+@@ -1,3 +1,5 @@
++// LambdaTeX: AI failures are classified (cause code in the log and in the reply stream)
++import { classifyAiError, streamErrorText } from './AiErrors.mjs'
+ import logger from '@overleaf/logger'
+ import { expressify } from '@overleaf/promise-utils'
+ import { getAiAccess } from './PermissionsMiddleware.mjs'
+@@ -13,6 +15,15 @@
  import { CLIENT_TOOLS, convertWorkbenchMessages } from './WorkbenchTools.mjs'
  import { WEB_SEARCH_TOOL, isWebSearchConfigured } from './WebSearchTool.mjs'
  import { DOCS_SEARCH_TOOL, isDocsSearchConfigured } from './DocsSearchTool.mjs'
@@ -16,7 +22,7 @@
  import { createToolCallLimit } from './ToolCallLimit.mjs'
  import {
    isQuotaEnabled,
-@@ -106,6 +115,20 @@
+@@ -106,6 +117,20 @@
    const tools = { ...CLIENT_TOOLS }
    if (webSearch) tools.web_search = WEB_SEARCH_TOOL
    if (docsSearch) tools.search_documentation = DOCS_SEARCH_TOOL
@@ -37,7 +43,7 @@
  
    // Include instructions for the search tools available in this request.
    let system = SYSTEM_PROMPT
-@@ -116,6 +139,28 @@
+@@ -116,6 +141,28 @@
      system += `\n\nYou have a search_documentation tool that searches the documentation of this Overleaf instance. When the user asks how Overleaf itself works — features, settings, account/project management, administration — call search_documentation and answer from the results, linking the source pages. Prefer it over web_search for questions about Overleaf itself.`
    }
  
@@ -66,7 +72,7 @@
    let modelMessages
    try {
      modelMessages = await convertWorkbenchMessages(messages)
-@@ -146,6 +191,16 @@
+@@ -146,6 +193,16 @@
  
      result.pipeUIMessageStreamToResponse(res, {
        consumeSseStream: consumeStream,
@@ -83,3 +89,26 @@
        // Suggestion counts are unmetered. Token headers report the balance
        // before this request because headers are sent before streaming completes.
        headers: {
+@@ -162,14 +219,18 @@
+             }),
+       },
+       onError(err) {
+-        logger.err({ err, userId }, 'workbench tex-gpt stream error')
+-        return 'The AI service returned an error. Please try again.'
++        const { code, status, detail } = classifyAiError(err)
++        if (code !== 'aborted') {
++          logger.warn({ userId, code, status, detail }, 'workbench tex-gpt: AI error')
++        }
++        return streamErrorText(code)
+       },
+     })
+   } catch (err) {
+-    logger.err({ err, userId }, 'workbench tex-gpt failed')
++    const { code, status, detail } = classifyAiError(err)
++    logger.warn({ userId, code, status, detail }, 'workbench tex-gpt: AI error before the reply started')
+     if (!res.headersSent) {
+-      res.status(500).json({ error: 'internal' })
++      res.status(502).json({ error: code })
+     }
+   }
+ }

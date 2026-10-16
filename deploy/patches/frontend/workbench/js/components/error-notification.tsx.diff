@@ -1,0 +1,61 @@
+--- error-notification.tsx.orig	2026-10-16 20:28:31.545027882 +0000
++++ error-notification.tsx	2026-10-16 20:29:12.709635778 +0000
+@@ -1,19 +1,26 @@
+ /**
+  * Displays chat errors from a message or structured notification.
+  * Uses a generic error notice when no details are supplied.
++ * LambdaTeX patch: structured errors may offer "Try again" (retry) and report
++ * dismissal, so each cause in ../ai-errors.ts gets its own message and action.
+  */
+ import { useTranslation } from 'react-i18next'
+ import OLNotification from '@/shared/components/notification'
++import OLButton from '@/shared/components/ol/ol-button'
+ 
+ export type WorkbenchError =
+   | string
+-  | { title?: string; message?: string; type?: string }
++  | { title?: string; message?: string; type?: string; retry?: boolean }
+   | boolean
+ 
+ export default function WorkbenchErrorNotification({
+   content,
++  onRetry,
++  onDismiss,
+ }: {
+   content: WorkbenchError
++  onRetry?: () => void
++  onDismiss?: () => void
+ }) {
+   const { t } = useTranslation()
+   switch (typeof content) {
+@@ -25,6 +32,7 @@
+           type="error"
+           className="workbench-error-notification"
+           isDismissible
++          onDismiss={onDismiss}
+         />
+       )
+     case 'object':
+@@ -35,6 +43,14 @@
+           type={(content.type as any) || 'error'}
+           className="workbench-error-notification"
+           isDismissible
++          onDismiss={onDismiss}
++          action={
++            content.retry && onRetry ? (
++              <OLButton variant="secondary" size="sm" onClick={onRetry}>
++                Try again
++              </OLButton>
++            ) : undefined
++          }
+         />
+       )
+     default:
+@@ -45,6 +61,7 @@
+           type="error"
+           className="workbench-error-notification"
+           isDismissible
++          onDismiss={onDismiss}
+         />
+       )
+   }

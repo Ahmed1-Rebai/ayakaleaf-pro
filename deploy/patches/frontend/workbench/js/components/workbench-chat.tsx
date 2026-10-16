@@ -33,7 +33,15 @@ import type { EditorView } from '@codemirror/view'
 import { useWorkbenchSettings, type WorkbenchTab } from '../context/workbench-settings-context'
 import { useWorkbenchFileActions } from '../hooks/use-file-actions'
 import { clientTools, serverTools } from '../tools/client-tools'
-import { RateLimitError, ForbiddenError, ToolRejectionError, ToolCallLimitError } from '../errors'
+import { RateLimitError, ToolRejectionError } from '../errors'
+// LambdaTeX patch: each failure gets its own message (../ai-errors.ts)
+import {
+  AiRequestError,
+  codeForResponse,
+  describeAiError,
+  describeToolError,
+  isAbort,
+} from '../ai-errors'
 import {
   Conversation,
   ConversationContent,
@@ -152,7 +160,13 @@ export default function WorkbenchChat({
         projectId: configRef.current.projectId,
       }),
       async fetch(input: RequestInfo | URL, init?: RequestInit) {
-        const response = await fetch(input, init)
+        let response: Response
+        try {
+          response = await fetch(input, init)
+        } catch (err) {
+          if (isAbort(err)) throw err
+          throw new AiRequestError('offline')
+        }
         if (response.headers.get('RateLimit-Reset')) {
           const resetMs = parseInt(response.headers.get('RateLimit-Reset') || '0') * 1000
           setPremiumSuggestionResetDate(new Date(Date.now() + resetMs))
@@ -165,15 +179,14 @@ export default function WorkbenchChat({
           setTokensLeft(parseInt(response.headers.get('Token-RateLimit-Remaining') || '0'))
         }
         if (!response.ok) {
-          if (response.status === 403) {
-            throw new ForbiddenError()
-          }
-          if (response.status === 409) {
-            throw new ToolCallLimitError()
-          }
           if (response.status === 429) {
             throw new RateLimitError(response.headers.get('RateLimit-Reset'))
           }
+          let serverCode: string | undefined
+          try {
+            serverCode = (await response.clone().json())?.error
+          } catch {}
+          throw new AiRequestError(codeForResponse(response.status, serverCode))
         }
         return response
       },
@@ -186,6 +199,8 @@ export default function WorkbenchChat({
     addToolOutput,
     id,
     sendMessage,
+    regenerate,
+    clearError,
     status,
   } = useChat({
     id: chatId,
@@ -195,11 +210,10 @@ export default function WorkbenchChat({
     onError(err: unknown) {
       if (err instanceof RateLimitError) {
         setError('paywalled')
-      } else if (err instanceof ToolCallLimitError) {
-        setError(err.message)
-      } else {
-        debugConsole.error(err)
-        setError(true)
+      } else if (!isAbort(err)) {
+        const info = describeAiError(err)
+        if (info.code === 'unknown') debugConsole.error(err)
+        setError(info)
       }
     },
     onFinish(event: unknown) {
@@ -235,7 +249,8 @@ export default function WorkbenchChat({
               errorText: err.message,
             })
             if (!(err instanceof ToolRejectionError) && !(err instanceof RateLimitError)) {
-              setError(true)
+              const title = tool.title?.({ input: toolCall.input })
+              setError(describeToolError(typeof title === 'string' ? title : name, err))
             }
           }
         }
@@ -452,8 +467,18 @@ export default function WorkbenchChat({
         // Prevent composer interaction while chat access is unavailable.
         {...(canChat ? {} : ({ inert: '' } as any))}
       >
-        {(error || status === 'error') && error !== 'paywalled' && (
-          <WorkbenchErrorNotification content={error as WorkbenchError} />
+        {error && error !== 'paywalled' && (
+          <WorkbenchErrorNotification
+            content={error as WorkbenchError}
+            onRetry={() => {
+              setError(false)
+              regenerate()
+            }}
+            onDismiss={() => {
+              setError(false)
+              clearError()
+            }}
+          />
         )}
         <PromptInput
           status={status}

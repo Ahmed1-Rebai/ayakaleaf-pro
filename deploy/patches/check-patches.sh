@@ -23,5 +23,6 @@ done <<'LIST'
 /overleaf/services/web/modules/workbench/frontend/js/hooks/use-file-actions.ts 29e7633c3020ae6862c762c852fb8f257121d721e85e2c3aadd70dfb41f5ee0d
 /overleaf/services/web/app/src/Features/StaticPages/HomeController.mjs e1133f1fd5e3e788cb0a0fae659f4829c894ea1b8e8eab27282ab12b2aedf836
 /overleaf/services/web/app/src/Features/StaticPages/StaticPagesRouter.mjs 82cc6c2f2b512963e66601f608ea862e55279023889498caf82357d051c1b9fc
+/overleaf/services/web/modules/workbench/frontend/js/components/error-notification.tsx d093c6212d01b2bcfc9c8cf1a27c334333197e7496c9c6fd697b97194ecdf37b
 LIST
 exit $status

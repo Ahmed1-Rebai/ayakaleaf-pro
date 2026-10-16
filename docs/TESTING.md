@@ -79,6 +79,15 @@ Checked with headless Chromium (Playwright) screenshots at 1440×900, and at 390
 | `ai_app_test.py`: chat LaTeX generation | ✅ PASS | reasoning → text stream, correct `tabular`, 1.4 s |
 | `ai_agentic_test.py`: agentic editing | ✅ PASS | `read_current_file` → `replace_lines` (lines 5–7) → `compile`: 0 errors → summary. This first version didn't replay reasoning, so it missed the browser failure below |
 
+## AI chat errors (2026-10-16)
+
+| Test | Result |
+|---|---|
+| `ai_errors_test.mjs` (unit): gateway refused/unknown host/timeouts, vLLM down behind LiteLLM (500), proxy 502/503 (also inside a RetryError), Groq TPM limit, LiteLLM budget, quota, context too long (vLLM, max_model_len), images unsupported (Groq, vLLM), bad key 401/403, unknown model (404/400), other 400, user stop, anything else; own stream text not logged twice | ✅ 25/25 |
+| `ai_errors_api_test.py` (real failures on the live server): a ~3 MB message → `[context_too_long]` in the reply stream (gateway: 262,144-token limit); a PDF attachment → HTTP 400 `invalid_attachments`; one log line with the code, status and a ≤ 240-character detail | ✅ 4/4 |
+| `browser/ai_errors_test.py`: 12 failure kinds each show their own title (none says "Something's gone wrong"); "Try again" only where it helps; dismissing hides the message; Try again re-sends and the real reply arrives | ✅ 14/14 |
+| Regression after the chat changes: `ai_edit_permissions_test.py`, `ai_conversations_test.py` | ✅ all passed |
+
 ## AI corrections and the integration client (2026-10-15)
 
 | Test | Result |
